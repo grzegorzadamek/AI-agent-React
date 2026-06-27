@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { submitDashboardMessage } from '../lib/mockApi'
+import { useDashboardMessage } from '../hooks/useDashboardMessage'
 
 type UserProfile = {
   id: string
@@ -26,45 +25,10 @@ type DashboardPageProps = {
 }
 
 export function DashboardPage({ user, stats, isLoading, onLogout, accessToken }: DashboardPageProps) {
-  const [message, setMessage] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitStatus, setSubmitStatus] = useState<{ type: 'idle' | 'success' | 'error'; text: string }>({
-    type: 'idle',
-    text: '',
+  const { message, setMessage, isSubmitting, submitStatus, handleSubmit } = useDashboardMessage({
+    accessToken,
+    email: user.email,
   })
-
-  const handleSubmit = async () => {
-    if (!accessToken) {
-      setSubmitStatus({ type: 'error', text: 'Brak tokena sesji.' })
-      return
-    }
-
-    if (!message.trim()) {
-      setSubmitStatus({ type: 'error', text: 'Wpisz wiadomość przed wysłaniem.' })
-      return
-    }
-
-    setIsSubmitting(true)
-    setSubmitStatus({ type: 'idle', text: '' })
-
-    try {
-      const result = await submitDashboardMessage({
-        message,
-        email: user.email,
-        accessToken,
-      })
-
-      setSubmitStatus({ type: 'success', text: result.message })
-      setMessage('')
-    } catch (error) {
-      setSubmitStatus({
-        type: 'error',
-        text: error instanceof Error ? error.message : 'Wystąpił błąd podczas wysyłania.',
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(139,92,246,0.18),_transparent_28%),linear-gradient(135deg,_#020617_0%,_#111827_100%)] px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
