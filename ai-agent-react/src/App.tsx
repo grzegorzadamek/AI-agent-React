@@ -1,8 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { LoginPage } from './components/LoginPage'
-import { DashboardPage } from './components/DashboardPage'
-import { CallbackPage } from './components/CallbackPage'
 import { AccessDeniedPage } from './components/AccessDeniedPage'
+import { CallbackPage } from './components/CallbackPage'
+import { DashboardPage } from './components/DashboardPage'
+import { LoginPage } from './components/LoginPage'
+import { ProtectedRoute } from './components/ProtectedRoute'
 import { useAuth } from './hooks/useAuth'
 
 function App() {
@@ -37,26 +38,32 @@ function App() {
       <Route
         path="/dashboard"
         element={
-          isDashboardAccessible ? (
-            dashboardQuery.isError ? (
-              <AccessDeniedPage email={authUser?.email ?? accessDeniedEmail ?? undefined} />
-            ) : (
-              <DashboardPage
-                user={authUser!}
-                stats={dashboardQuery.data}
-                isLoading={dashboardQuery.isLoading}
-                onLogout={handleLogout}
-                accessToken={accessToken}
-              />
-            )
-          ) : (
-            <AccessDeniedPage email={authUser?.email ?? accessDeniedEmail ?? undefined} />
-          )
+          <ProtectedRoute
+            condition={isDashboardAccessible}
+            fallback={<AccessDeniedPage email={authUser?.email ?? accessDeniedEmail ?? undefined} />}
+          >
+            <DashboardPage
+              user={authUser!}
+              stats={dashboardQuery.data}
+              isLoading={dashboardQuery.isLoading}
+              onLogout={handleLogout}
+              accessToken={accessToken}
+            />
+          </ProtectedRoute>
         }
       />
       <Route
         path="/access-denied"
-        element={authUser || sessionNotice || accessDeniedEmail ? <AccessDeniedPage email={authUser?.email ?? accessDeniedEmail ?? undefined} reason={sessionNotice ? 'session-expired' : 'forbidden'} /> : <Navigate to="/" replace />}
+        element={
+          authUser || sessionNotice || accessDeniedEmail ? (
+            <AccessDeniedPage
+              email={authUser?.email ?? accessDeniedEmail ?? undefined}
+              reason={sessionNotice ? 'session-expired' : 'forbidden'}
+            />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

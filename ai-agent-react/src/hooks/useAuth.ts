@@ -1,70 +1,36 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { authenticateUser, fetchDashboardData, refreshAccessToken, type UserProfile } from '../lib/mockApi'
-import { ACCESS_TOKEN_KEY, OAUTH_NONCE_KEY, OAUTH_STATE_KEY, authStorage } from '../utils/authStorage'
+import { authenticateUser, refreshAccessToken } from '../lib/mockApi'
+import { fetchDashboardStatsWithFallback } from '../lib/apiClient'
+import {
+  ACCESS_TOKEN_KEY,
+  authStorage,
+} from '../utils/authStorage'
+import {
+  buildGoogleOAuthUrl,
+  buildMockUserProfile,
+  getStoredAccessToken,
+  getStoredAuthUser,
+  persistAuthSession,
+  validateGoogleCallback,
+} from '../lib/auth'
+import type { UserProfile } from '../types'
 
 type AuthStep = 'idle' | 'redirecting' | 'authenticating' | 'success'
-
-type AuthorizationStatus = 'pending' | 'authorized' | 'forbidden'
+type CallbackStatus = 'processing' | 'error'
 
 const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000
 
-const buildGoogleOAuthUrl = () => {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
-  const redirectUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/callback`
-
-  if (!clientId) {
-    throw new Error('Missing VITE_GOOGLE_CLIENT_ID')
-  }
-
-  const state = `demo-state-${Math.random().toString(36).slice(2)}`
-  const nonce = `google-${Math.random().toString(36).slice(2)}`
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    response_type: 'id_token',
-    scope: 'openid profile email',
-    state,
-    prompt: 'select_account',
-    nonce,
-  })
-
-  authStorage.write(OAUTH_STATE_KEY, state)
-  authStorage.write(OAUTH_NONCE_KEY, nonce)
-
-  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
-}
-
-const decodeGoogleUser = (idToken: string) => {
-  const payload = idToken.split('.')[1]
-  const normalized = payload.replace(/-/g, '+').replace(/_/g, '/').trim()
-  const decoded = decodeURIComponent(
-    atob(normalized)
-      .split('')
-      .map((char) => `%${`00${char.charCodeAt(0).toString(16)}`.slice(-2)}`)
-      .join(''),
-  )
-
-  return JSON.parse(decoded) as {
-    sub?: string
-    email?: string
-    name?: string
-    given_name?: string
-    family_name?: string
-    nonce?: string
-  }
-}
-
 export function useAuth() {
   const [authUser, setAuthUser] = useState<UserProfile | null>(() => {
-    const storedValue = authStorage.read('ai-agent-auth-user')
+    const storedValue = getStoredAuthUser()
     return storedValue ? (JSON.parse(storedValue) as UserProfile) : null
   })
-  const [accessToken, setAccessToken] = useState<string | null>(() => authStorage.read(ACCESS_TOKEN_KEY))
+
+  const [accessToken, setAccessToken] = useState<string | null>(() => getStoredAccessToken())
   const [authStep, setAuthStep] = useState<AuthStep>('idle')
-  const [callbackStatus, setCallbackStatus] = useState<'processing' | 'error'>('processing')
-  const [authorizationStatus, setAuthorizationStatus] = useState<AuthorizationStatus>('pending')
+  const [callbackStatus, setCallbackStatus] = useState<CallbackStatus>('processing')
   const [sessionNotice, setSessionNotice] = useState<string | null>(null)
   const [accessDeniedEmail, setAccessDeniedEmail] = useState<string | null>(null)
   const queryClient = useQueryClient()
@@ -72,24 +38,26 @@ export function useAuth() {
   const location = useLocation()
   const hashParams = useMemo(() => new URLSearchParams(location.hash.replace(/^#/, '')), [location.hash])
 
-  const clearSession = (reason: 'expired' | 'logout' = 'expired') => {
-    setAuthUser(null)
-    setAccessToken(null)
-    setAuthorizationStatus('pending')
-    setAuthStep('idle')
-    setSessionNotice(
-      reason === 'expired'
-        ? 'Twoja sesja wygasła z powodu bezczynności lub upłynięcia czasu. Zaloguj się ponownie, aby kontynuować.'
-        : null,
-    )
-    setAccessDeniedEmail(null)
-    authStorage.clearSession()
-    queryClient.clear()
-  }
+  const clearSession = useCallback(
+    (reason: 'expired' | 'logout' = 'expired') => {
+      setAuthUser(null)
+      setAccessToken(null)
+      setAuthStep('idle')
+      setSessionNotice(
+        reason === 'expired'
+          ? 'Twoja sesja wygasła z powodu bezczynności lub upłynięcia czasu. Zaloguj się ponownie, aby kontynuować.'
+          : null,
+      )
+      setAccessDeniedEmail(null)
+      authStorage.clearSession()
+      queryClient.clear()
+    },
+    [queryClient],
+  )
 
-  const touchSession = () => {
+  const touchSession = useCallback(() => {
     authStorage.touchSession()
-  }
+  }, [])
 
   useEffect(() => {
     if (!authStorage.isSessionValid()) {
@@ -103,9 +71,9 @@ export function useAuth() {
     }
 
     if (authUser && accessToken) {
-      setAuthorizationStatus('authorized')
+      setAccessDeniedEmail(null)
     }
-  }, [accessToken, authUser, location.pathname, navigate])
+  }, [accessToken, authUser, clearSession, location.pathname, navigate])
 
   useEffect(() => {
     if (!authUser || !accessToken || !authStorage.isSessionValid()) {
@@ -133,7 +101,7 @@ export function useAuth() {
         window.clearTimeout(timeoutId)
       }
     }
-  }, [authUser, accessToken, navigate])
+  }, [authUser, accessToken, clearSession, navigate, touchSession])
 
   const loginMutation = useMutation({
     mutationFn: async () => {
@@ -156,140 +124,113 @@ export function useAuth() {
       }
 
       const refreshedToken = await refreshAccessToken({ accessToken, email: authUser.email })
-      const headers = new Headers()
-      headers.set('Authorization', `Bearer ${refreshedToken}`)
-
       setAccessToken(refreshedToken)
       authStorage.write(ACCESS_TOKEN_KEY, refreshedToken)
       touchSession()
 
-      return fetchDashboardData({ accessToken: refreshedToken, email: authUser.email, headers })
+      return fetchDashboardStatsWithFallback(refreshedToken, authUser.email)
     },
     enabled: Boolean(authUser && accessToken),
     staleTime: 60_000,
     retry: false,
   })
 
-  const handleGoogleLogin = () => {
-    if (loginMutation.isPending) {
-      return
-    }
-
-    try {
+  const handleGoogleLogin = useCallback(() => {
+    if (!loginMutation.isPending) {
       loginMutation.mutate()
-    } catch (error) {
-      setAuthStep('idle')
-      console.error(error)
     }
-  }
+  }, [loginMutation])
 
   useEffect(() => {
+    if (location.pathname !== '/auth/callback') {
+      return undefined
+    }
+
     const idToken = hashParams.get('id_token')
-    const error = hashParams.get('error')
     const state = hashParams.get('state')
+    const error = hashParams.get('error')
 
-    if (location.pathname === '/auth/callback' && idToken && state) {
-      setAuthStep('authenticating')
-      setCallbackStatus('processing')
+    if (error) {
+      setCallbackStatus('error')
+      setAuthStep('idle')
+      return undefined
+    }
 
-      const timeout = window.setTimeout(() => {
-        const googleUserData = decodeGoogleUser(idToken)
-        const expectedState = authStorage.read(OAUTH_STATE_KEY)
-        const expectedNonce = authStorage.read(OAUTH_NONCE_KEY)
-        const receivedNonce = googleUserData.nonce
+    if (!idToken || !state) {
+      return undefined
+    }
 
-        if (expectedState !== state || expectedNonce !== receivedNonce) {
-          setCallbackStatus('error')
-          setAuthStep('idle')
-          authStorage.remove(OAUTH_STATE_KEY)
-          authStorage.remove(OAUTH_NONCE_KEY)
-          navigate('/access-denied', { replace: true })
-          return
-        }
+    setAuthStep('authenticating')
+    setCallbackStatus('processing')
 
-        authStorage.remove(OAUTH_STATE_KEY)
-        authStorage.remove(OAUTH_NONCE_KEY)
+    const timeoutId = window.setTimeout(() => {
+      const { payload, isValid } = validateGoogleCallback(idToken, state)
 
-        const email = googleUserData.email || 'unknown@example.com'
-        const name = [googleUserData.given_name, googleUserData.family_name].filter(Boolean).join(' ').trim() || googleUserData.name || 'Google User'
-        const initials = name
-          .split(' ')
-          .map((part) => part[0])
-          .join('')
-          .slice(0, 2)
-          .toUpperCase()
+      if (!isValid) {
+        setCallbackStatus('error')
+        setAuthStep('idle')
+        navigate('/access-denied', { replace: true })
+        return
+      }
 
-        const user: UserProfile = {
-          id: googleUserData.sub || email,
-          name,
-          email,
-          role: 'Product Designer',
-          plan: 'Pro',
-          avatar: initials || 'G',
-        }
+      const email = payload.email ?? 'unknown@example.com'
+      const userFromPayload = buildMockUserProfile(payload)
 
-        void (async () => {
-          try {
-            const result = await authenticateUser({ email, idToken })
+      void (async () => {
+        try {
+          const result = await authenticateUser({ email, idToken })
 
-            if (!result.authorized || !result.user || !result.accessToken) {
-              setAuthUser(null)
-              setAccessToken(null)
-              setAuthorizationStatus('forbidden')
-              setAuthStep('success')
-              setAccessDeniedEmail(email)
-              authStorage.clearSession()
-              navigate('/access-denied', { replace: true })
-              return
-            }
-
-            const authenticatedUser = {
-              ...user,
-              ...result.user,
-            }
-
-            setAuthUser(authenticatedUser)
-            setAccessToken(result.accessToken)
-            setAuthorizationStatus('authorized')
-            setAuthStep('success')
-            authStorage.write('ai-agent-auth-user', JSON.stringify(authenticatedUser))
-            authStorage.write(ACCESS_TOKEN_KEY, result.accessToken)
-            touchSession()
-            navigate('/dashboard', { replace: true })
-          } catch (error) {
-            setAuthUser(null)
-            setAccessToken(null)
-            setAuthorizationStatus('forbidden')
-            setAuthStep('success')
+          if (!result.authorized || !result.user || !result.accessToken) {
+            clearSession('logout')
             setAccessDeniedEmail(email)
-            authStorage.clearSession()
+            setAuthStep('success')
+            setCallbackStatus('error')
             navigate('/access-denied', { replace: true })
-            console.error(error)
+            return
           }
-        })()
-      }, 900)
 
-      return () => window.clearTimeout(timeout)
-    }
+          const authenticatedUser = {
+            ...userFromPayload,
+            ...result.user,
+          }
 
-    if (location.pathname === '/auth/callback') {
-      setCallbackStatus(error ? 'error' : 'error')
-    }
-  }, [hashParams, location.pathname, navigate])
+          setAuthUser(authenticatedUser)
+          setAccessToken(result.accessToken)
+          setAuthStep('success')
+          setAccessDeniedEmail(null)
+          persistAuthSession(authenticatedUser, result.accessToken)
+          touchSession()
+          queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+          navigate('/dashboard', { replace: true })
+        } catch (fetchError) {
+          clearSession('logout')
+          setAccessDeniedEmail(email)
+          setAuthStep('success')
+          setCallbackStatus('error')
+          navigate('/access-denied', { replace: true })
+          console.error(fetchError)
+        }
+      })()
+    }, 300)
 
-  const handleLogout = () => {
+    return () => window.clearTimeout(timeoutId)
+  }, [clearSession, hashParams, location.pathname, navigate, queryClient, touchSession])
+
+  const handleLogout = useCallback(() => {
     clearSession('logout')
     navigate('/')
-  }
+  }, [clearSession, navigate])
 
-  const isDashboardAccessible = Boolean(authUser && accessToken && authorizationStatus === 'authorized' && authStorage.isSessionValid())
+  const isDashboardAccessible = useMemo(
+    () => Boolean(authUser && accessToken && authStorage.isSessionValid()),
+    [accessToken, authUser],
+  )
 
   return {
     authUser,
     accessToken,
     authStep,
     callbackStatus,
-    authorizationStatus,
     sessionNotice,
     accessDeniedEmail,
     dashboardQuery,

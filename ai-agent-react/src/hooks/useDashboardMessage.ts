@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { submitDashboardMessage } from '../lib/mockApi'
+import { useCallback, useState } from 'react'
+import { submitDashboardMessageWithFallback } from '../lib/apiClient'
+import type { SubmitStatus } from '../types'
 
 type UseDashboardMessageArgs = {
   accessToken?: string | null
@@ -9,12 +10,9 @@ type UseDashboardMessageArgs = {
 export function useDashboardMessage({ accessToken, email }: UseDashboardMessageArgs) {
   const [message, setMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitStatus, setSubmitStatus] = useState<{ type: 'idle' | 'success' | 'error'; text: string }>({
-    type: 'idle',
-    text: '',
-  })
+  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>({ type: 'idle', text: '' })
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!accessToken) {
       setSubmitStatus({ type: 'error', text: 'Brak tokena sesji.' })
       return
@@ -29,12 +27,7 @@ export function useDashboardMessage({ accessToken, email }: UseDashboardMessageA
     setSubmitStatus({ type: 'idle', text: '' })
 
     try {
-      const result = await submitDashboardMessage({
-        message,
-        email,
-        accessToken,
-      })
-
+      const result = await submitDashboardMessageWithFallback(accessToken, email, message)
       setSubmitStatus({ type: 'success', text: result.message })
       setMessage('')
     } catch (error) {
@@ -45,7 +38,7 @@ export function useDashboardMessage({ accessToken, email }: UseDashboardMessageA
     } finally {
       setIsSubmitting(false)
     }
-  }
+  }, [accessToken, email, message])
 
   return {
     message,
