@@ -200,6 +200,78 @@ components:
       bearerFormat: JWT
 ```
 
+## Local development setup
+
+### 1) Prepare frontend environment
+
+Create a frontend environment file in the project root:
+
+```env
+VITE_GOOGLE_CLIENT_ID=your-google-client-id
+VITE_GOOGLE_REDIRECT_URI=http://localhost:5173/auth/callback
+VITE_API_BASE_URL=http://localhost:3000/api
+```
+
+### 2) Prepare backend environment
+
+Create a backend environment file in the `backend` folder:
+
+```env
+PORT=3000
+NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
+JWT_ACCESS_SECRET=replace-me
+JWT_REFRESH_SECRET=replace-me
+FIREBASE_PROJECT_ID=your-firebase-project-id
+GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
+```
+
+### 3) Firebase setup
+
+1. Create or open a Firebase project in Firebase Console.
+2. Enable Firebase Authentication with Google Sign-In.
+3. In Google Cloud Console create OAuth credentials.
+4. Download the Firebase service account JSON and save it as `backend/service-account.json`.
+
+### 4) Start the backend
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+The backend will run on:
+
+```text
+http://localhost:3000
+```
+
+### 5) Start the frontend
+
+```bash
+cd ..
+npm install
+npm run dev
+```
+
+The frontend will run on:
+
+```text
+http://localhost:5173
+```
+
+### 6) Test flow
+
+1. Open `http://localhost:5173`
+2. Click `Kontynuuj z Google`
+3. Confirm the Google login
+4. The backend redirects back to the frontend callback route and stores the issued tokens in browser session storage
+5. The dashboard requests data from the backend protected endpoint
+
 ## Next steps before production
 
 1. Replace the mock API with real HTTP calls.

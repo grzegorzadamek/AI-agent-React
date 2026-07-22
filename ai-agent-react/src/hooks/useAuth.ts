@@ -1,19 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { authenticateUser, refreshAccessToken } from '../lib/mockApi'
-import { fetchDashboardStatsWithFallback } from '../lib/apiClient'
+import { fetchDashboardStatsWithFallback, refreshAccessToken } from '../lib/apiClient'
 import {
   ACCESS_TOKEN_KEY,
   authStorage,
 } from '../utils/authStorage'
 import {
   buildGoogleOAuthUrl,
-  buildMockUserProfile,
   getStoredAccessToken,
   getStoredAuthUser,
+  getStoredRefreshToken,
   persistAuthSession,
-  validateGoogleCallback,
 } from '../lib/auth'
 import type { UserProfile } from '../types'
 
@@ -36,7 +34,6 @@ export function useAuth() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const location = useLocation()
-  const hashParams = useMemo(() => new URLSearchParams(location.hash.replace(/^#/, '')), [location.hash])
 
   const clearSession = useCallback(
     (reason: 'expired' | 'logout' = 'expired') => {
@@ -123,12 +120,18 @@ export function useAuth() {
         throw new Error('Missing auth context')
       }
 
-      const refreshedToken = await refreshAccessToken({ accessToken, email: authUser.email })
-      setAccessToken(refreshedToken)
-      authStorage.write(ACCESS_TOKEN_KEY, refreshedToken)
+      const refreshToken = getStoredRefreshToken()
+      if (!refreshToken) {
+        throw new Error('Missing refresh token')
+      }
+
+      const refreshedSession = await refreshAccessToken(refreshToken)
+      setAccessToken(refreshedSession.accessToken)
+      authStorage.write(ACCESS_TOKEN_KEY, refreshedSession.accessToken)
+      persistAuthSession(authUser, refreshedSession.accessToken, refreshedSession.refreshToken)
       touchSession()
 
-      return fetchDashboardStatsWithFallback(refreshedToken, authUser.email)
+      return fetchDashboardStatsWithFallback(refreshedSession.accessToken)
     },
     enabled: Boolean(authUser && accessToken),
     staleTime: 60_000,
@@ -142,13 +145,23 @@ export function useAuth() {
   }, [loginMutation])
 
   useEffect(() => {
+    if (location.pathname === '/access-denied') {
+      const email = new URLSearchParams(location.search).get('email')
+      if (email) {
+        setAccessDeniedEmail(email)
+      }
+      return undefined
+    }
+
     if (location.pathname !== '/auth/callback') {
       return undefined
     }
 
-    const idToken = hashParams.get('id_token')
-    const state = hashParams.get('state')
-    const error = hashParams.get('error')
+    const params = new URLSearchParams(location.search)
+    const error = params.get('error')
+    const accessToken = params.get('accessToken') ?? params.get('access_token')
+    const refreshToken = params.get('refreshToken') ?? params.get('refresh_token')
+    const encodedUser = params.get('user')
 
     if (error) {
       setCallbackStatus('error')
@@ -156,67 +169,52 @@ export function useAuth() {
       return undefined
     }
 
-    if (!idToken || !state) {
+    if (!accessToken || !refreshToken || !encodedUser) {
       return undefined
     }
 
     setAuthStep('authenticating')
     setCallbackStatus('processing')
 
-    const timeoutId = window.setTimeout(() => {
-      const { payload, isValid } = validateGoogleCallback(idToken, state)
+    try {
+      const authenticatedUser = JSON.parse(decodeURIComponent(encodedUser)) as UserProfile
 
-      if (!isValid) {
-        setCallbackStatus('error')
-        setAuthStep('idle')
-        navigate('/access-denied', { replace: true })
-        return
+      setAuthUser(authenticatedUser)
+      setAccessToken(accessToken)
+      setAuthStep('success')
+      setAccessDeniedEmail(null)
+      persistAuthSession(authenticatedUser, accessToken, refreshToken)
+      touchSession()
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      navigate('/dashboard', { replace: true })
+    } catch (fetchError) {
+      clearSession('logout')
+      setCallbackStatus('error')
+      setAuthStep('idle')
+      navigate('/access-denied', { replace: true })
+      console.error(fetchError)
+    }
+
+    return undefined
+  }, [clearSession, location.pathname, location.search, navigate, queryClient, touchSession])
+
+  const handleLogout = useCallback(async () => {
+    const activeToken = getStoredAccessToken()
+
+    if (activeToken) {
+      try {
+        await fetch(`${(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api').replace(/\/$/, '')}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${activeToken}`,
+          },
+        })
+      } catch {
+        console.warn('Logout request failed, continuing with client-side cleanup.')
       }
+    }
 
-      const email = payload.email ?? 'unknown@example.com'
-      const userFromPayload = buildMockUserProfile(payload)
-
-      void (async () => {
-        try {
-          const result = await authenticateUser({ email, idToken })
-
-          if (!result.authorized || !result.user || !result.accessToken) {
-            clearSession('logout')
-            setAccessDeniedEmail(email)
-            setAuthStep('success')
-            setCallbackStatus('error')
-            navigate('/access-denied', { replace: true })
-            return
-          }
-
-          const authenticatedUser = {
-            ...userFromPayload,
-            ...result.user,
-          }
-
-          setAuthUser(authenticatedUser)
-          setAccessToken(result.accessToken)
-          setAuthStep('success')
-          setAccessDeniedEmail(null)
-          persistAuthSession(authenticatedUser, result.accessToken)
-          touchSession()
-          queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
-          navigate('/dashboard', { replace: true })
-        } catch (fetchError) {
-          clearSession('logout')
-          setAccessDeniedEmail(email)
-          setAuthStep('success')
-          setCallbackStatus('error')
-          navigate('/access-denied', { replace: true })
-          console.error(fetchError)
-        }
-      })()
-    }, 300)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [clearSession, hashParams, location.pathname, navigate, queryClient, touchSession])
-
-  const handleLogout = useCallback(() => {
     clearSession('logout')
     navigate('/')
   }, [clearSession, navigate])

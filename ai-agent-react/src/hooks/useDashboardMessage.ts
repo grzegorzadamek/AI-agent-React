@@ -27,7 +27,7 @@ export function useDashboardMessage({ accessToken, email }: UseDashboardMessageA
     setSubmitStatus({ type: 'idle', text: '' })
 
     try {
-      const result = await submitDashboardMessageWithFallback(accessToken, email, message)
+      const result = await submitDashboardMessageWithFallback(accessToken, message)
       setSubmitStatus({ type: 'success', text: result.message })
       setMessage('')
     } catch (error) {

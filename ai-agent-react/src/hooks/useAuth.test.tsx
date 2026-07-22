@@ -1,5 +1,4 @@
 import { act, render } from '@testing-library/react'
-import { useEffect } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { useAuth } from './useAuth'
 import * as authLib from '../lib/auth'
@@ -30,9 +29,9 @@ vi.mock('@tanstack/react-query', async () => {
   }
 })
 
-vi.mock('../lib/mockApi', () => ({
-  authenticateUser: vi.fn(async () => ({ authorized: true, user: { id: '1', name: 'Test User', email: 'test@example.com', role: 'Product Designer', plan: 'Pro', avatar: 'TU' }, accessToken: 'token' })),
-  refreshAccessToken: vi.fn(async () => 'new-token'),
+vi.mock('../lib/apiClient', () => ({
+  fetchDashboardStatsWithFallback: vi.fn(async () => ({ projects: 1, tasks: 2, notifications: 3, completion: 50 })),
+  refreshAccessToken: vi.fn(async () => ({ accessToken: 'new-token', refreshToken: 'refresh-token', expiresIn: 900 })),
 }))
 
 vi.mock('../utils/authStorage', () => {
@@ -49,6 +48,7 @@ vi.mock('../utils/authStorage', () => {
     authStorage,
     AUTH_USER_KEY: 'ai-agent-auth-user',
     ACCESS_TOKEN_KEY: 'ai-agent-access-token',
+    REFRESH_TOKEN_KEY: 'ai-agent-refresh-token',
     SESSION_TTL_MS: 15 * 60 * 1000,
     SESSION_TIMESTAMP_KEY: 'ai-agent-session-timestamp',
     OAUTH_STATE_KEY: 'ai-agent-oauth-state',

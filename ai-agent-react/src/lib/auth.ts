@@ -1,4 +1,4 @@
-import { AUTH_USER_KEY, ACCESS_TOKEN_KEY, OAUTH_NONCE_KEY, OAUTH_STATE_KEY, authStorage } from '../utils/authStorage'
+import { AUTH_USER_KEY, ACCESS_TOKEN_KEY, OAUTH_NONCE_KEY, OAUTH_STATE_KEY, REFRESH_TOKEN_KEY, authStorage } from '../utils/authStorage'
 import type { UserProfile } from '../types'
 
 type GoogleJwtPayload = {
@@ -15,29 +15,13 @@ const normalizeString = (value: string) => value.trim()
 const buildStringFromParts = (parts: Array<string | undefined>) => parts.filter(Boolean).join(' ').trim()
 
 export const buildGoogleOAuthUrl = () => {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
-  const redirectUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/callback`
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api').replace(/\/$/, '')
 
-  if (!clientId) {
-    throw new Error('Missing VITE_GOOGLE_CLIENT_ID')
+  if (!apiBaseUrl) {
+    throw new Error('Missing VITE_API_BASE_URL')
   }
 
-  const state = `demo-state-${Math.random().toString(36).slice(2)}`
-  const nonce = `google-${Math.random().toString(36).slice(2)}`
-
-  authStorage.write(OAUTH_STATE_KEY, state)
-  authStorage.write(OAUTH_NONCE_KEY, nonce)
-
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    response_type: 'id_token',
-    scope: 'openid profile email',
-    state,
-    nonce,
-  })
-
-  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
+  return `${apiBaseUrl}/auth/google/login`
 }
 
 export const decodeGoogleIdToken = (idToken: string): GoogleJwtPayload => {
@@ -91,8 +75,13 @@ export const validateGoogleCallback = (idToken: string, state: string) => {
 export const getStoredAuthUser = (): string | null => authStorage.read(AUTH_USER_KEY)
 
 export const getStoredAccessToken = (): string | null => authStorage.read(ACCESS_TOKEN_KEY)
+export const getStoredRefreshToken = (): string | null => authStorage.read(REFRESH_TOKEN_KEY)
 
-export const persistAuthSession = (user: UserProfile, token: string) => {
+export const persistAuthSession = (user: UserProfile, token: string, refreshToken?: string) => {
   authStorage.write(AUTH_USER_KEY, JSON.stringify(user))
   authStorage.write(ACCESS_TOKEN_KEY, token)
+
+  if (refreshToken) {
+    authStorage.write(REFRESH_TOKEN_KEY, refreshToken)
+  }
 }

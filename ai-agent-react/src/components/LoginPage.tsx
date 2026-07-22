@@ -12,7 +12,7 @@ const authStepLabels: Record<LoginPageProps['authStep'], string> = {
   success: 'Logowanie zakończone. Przekierowuję do dashboardu…',
 }
 
-const isMissingGoogleConfig = !import.meta.env.VITE_GOOGLE_CLIENT_ID
+const isMissingBackendConfig = !import.meta.env.VITE_API_BASE_URL
 
 export function LoginPage({ onLogin, isLoading, authStep, sessionNotice }: LoginPageProps) {
   return (
@@ -76,9 +76,9 @@ export function LoginPage({ onLogin, isLoading, authStep, sessionNotice }: Login
                   {sessionNotice}
                 </p>
               ) : null}
-              {isMissingGoogleConfig ? (
+              {isMissingBackendConfig ? (
                 <p className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-amber-300">
-                  Brakuje ustawienia VITE_GOOGLE_CLIENT_ID. Dodaj poprawny client ID z Google Cloud Console, aby OAuth zaczął działać.
+                  Brakuje ustawienia VITE_API_BASE_URL. Dodaj adres backendu, np. http://localhost:3000/api, aby OAuth zaczął działać.
                 </p>
               ) : null}
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800">

@@ -1,10 +1,18 @@
 import type { DashboardStats } from '../types'
-import { fetchDashboardStatsFallback, submitDashboardMessageFallback } from './mockClient'
 
-const isRealBackendEnabled = Boolean(import.meta.env.VITE_API_BASE_URL)
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? ''
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api').replace(/\/$/, '')
+const isRealBackendEnabled = Boolean(apiBaseUrl)
 
-const buildHeaders = (accessToken: string) => {
+type ApiEnvelope<T> = {
+  success: boolean
+  data: T
+  error?: {
+    code: string
+    message: string
+  }
+}
+
+const buildHeaders = (accessToken?: string) => {
   const headers = new Headers({
     'Content-Type': 'application/json',
   })
@@ -25,7 +33,17 @@ const parseJson = async <T>(response: Response): Promise<T> => {
   }
 }
 
-export const fetchDashboardStats = async (accessToken: string, email: string): Promise<DashboardStats> => {
+const parseApiPayload = async <T>(response: Response): Promise<T> => {
+  const payload = await parseJson<ApiEnvelope<T>>(response)
+
+  if (!payload.success) {
+    throw new Error(payload.error?.message ?? 'API request failed')
+  }
+
+  return payload.data
+}
+
+export const fetchDashboardStats = async (accessToken: string): Promise<DashboardStats> => {
   if (!isRealBackendEnabled) {
     throw new Error('Real backend not configured')
   }
@@ -39,51 +57,62 @@ export const fetchDashboardStats = async (accessToken: string, email: string): P
     throw new Error(`API error: ${response.status}`)
   }
 
-  return parseJson<DashboardStats>(response)
+  return parseApiPayload<DashboardStats>(response)
 }
 
-export const submitDashboardMessageToApi = async (accessToken: string, email: string, message: string) => {
+export const submitDashboardMessageToApi = async (accessToken: string, message: string) => {
   if (!isRealBackendEnabled) {
     throw new Error('Real backend not configured')
   }
 
-  const response = await fetch(`${apiBaseUrl}/messages`, {
+  const response = await fetch(`${apiBaseUrl}/dashboard/message`, {
     method: 'POST',
     headers: buildHeaders(accessToken),
-    body: JSON.stringify({ email, message }),
+    body: JSON.stringify({ message }),
   })
 
   if (!response.ok) {
     throw new Error(`API error: ${response.status}`)
   }
 
-  return parseJson<{ ok: boolean; message: string }>(response)
+  return parseApiPayload<{ ok: boolean; message: string }>(response)
 }
 
-export const fetchDashboardStatsWithFallback = async (accessToken: string, email: string): Promise<DashboardStats> => {
+export const refreshAccessToken = async (refreshToken: string) => {
   if (!isRealBackendEnabled) {
-    return fetchDashboardStatsFallback(accessToken, email)
+    throw new Error('Real backend not configured')
   }
 
-  try {
-    return await fetchDashboardStats(accessToken, email)
-  } catch (error) {
-    console.warn('Real backend failed, falling back to mock implementation.', error)
-    return fetchDashboardStatsFallback(accessToken, email)
+  const response = await fetch(`${apiBaseUrl}/auth/refresh`, {
+    method: 'POST',
+    headers: buildHeaders(),
+    body: JSON.stringify({ refreshToken }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`)
   }
+
+  return parseApiPayload<{ accessToken: string; refreshToken: string; expiresIn: number }>(response)
 }
 
-export const submitDashboardMessageWithFallback = async (accessToken: string, email: string, message: string) => {
+export const logoutFromApi = async (accessToken: string) => {
   if (!isRealBackendEnabled) {
-    return submitDashboardMessageFallback(accessToken, email, message)
+    return
   }
 
-  try {
-    return await submitDashboardMessageToApi(accessToken, email, message)
-  } catch (error) {
-    console.warn('Real backend failed, falling back to mock implementation.', error)
-    return submitDashboardMessageFallback(accessToken, email, message)
-  }
+  await fetch(`${apiBaseUrl}/auth/logout`, {
+    method: 'POST',
+    headers: buildHeaders(accessToken),
+  })
+}
+
+export const fetchDashboardStatsWithFallback = async (accessToken: string): Promise<DashboardStats> => {
+  return fetchDashboardStats(accessToken)
+}
+
+export const submitDashboardMessageWithFallback = async (accessToken: string, message: string) => {
+  return submitDashboardMessageToApi(accessToken, message)
 }
 
 export const isRealBackendAvailable = isRealBackendEnabled

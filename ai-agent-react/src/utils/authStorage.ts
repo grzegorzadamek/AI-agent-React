@@ -1,5 +1,6 @@
 const AUTH_USER_KEY = 'ai-agent-auth-user'
 const ACCESS_TOKEN_KEY = 'ai-agent-access-token'
+const REFRESH_TOKEN_KEY = 'ai-agent-refresh-token'
 const SESSION_TTL_MS = 15 * 60 * 1000
 const SESSION_TIMESTAMP_KEY = 'ai-agent-session-timestamp'
 const OAUTH_STATE_KEY = 'ai-agent-oauth-state'
@@ -27,6 +28,7 @@ export const authStorage = {
   clearSession() {
     this.remove(AUTH_USER_KEY)
     this.remove(ACCESS_TOKEN_KEY)
+    this.remove(REFRESH_TOKEN_KEY)
     this.remove(SESSION_TIMESTAMP_KEY)
     this.remove(OAUTH_STATE_KEY)
     this.remove(OAUTH_NONCE_KEY)
@@ -42,4 +44,4 @@ export const authStorage = {
   },
 }
 
-export { AUTH_USER_KEY, ACCESS_TOKEN_KEY, SESSION_TTL_MS, SESSION_TIMESTAMP_KEY, OAUTH_STATE_KEY, OAUTH_NONCE_KEY }
+export { AUTH_USER_KEY, ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, SESSION_TTL_MS, SESSION_TIMESTAMP_KEY, OAUTH_STATE_KEY, OAUTH_NONCE_KEY }

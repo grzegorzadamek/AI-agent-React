@@ -1,6 +1,5 @@
 import { act, render } from '@testing-library/react'
-import { useEffect, useRef } from 'react'
-import { vi, describe, expect, it } from 'vitest'
+import { vi, describe, expect, it, beforeEach } from 'vitest'
 import { useDashboardMessage } from './useDashboardMessage'
 import * as apiClient from '../lib/apiClient'
 
@@ -57,7 +56,7 @@ describe('useDashboardMessage', () => {
       await result.current?.handleSubmit()
     })
 
-    expect(apiClient.submitDashboardMessageWithFallback).toHaveBeenCalledWith('token', 'test@example.com', 'Hello from test')
+    expect(apiClient.submitDashboardMessageWithFallback).toHaveBeenCalledWith('token', 'Hello from test')
     expect(result.current?.submitStatus).toEqual({ type: 'success', text: mockResponse.message })
     expect(result.current?.message).toBe('')
   })
