@@ -12,6 +12,8 @@ const memoryAllowedEmails = new Set<string>(
     .filter(Boolean),
 )
 
+const memoryDashboardProgress = new Map<string, { message: string; completion: number }>()
+
 const upsertMemoryUser = (user: UserProfile) => {
   const memoryUser: UserProfile = {
     ...user,
@@ -120,9 +122,58 @@ export const isEmailAllowed = async (email: string) => {
   }
 }
 
-export const getDashboardStatsForUser = async (email: string) => ({
-  projects: 12,
-  tasks: 34,
-  notifications: 7,
-  completion: 84,
-})
+export const getDashboardStatsForUser = async (email: string) => {
+  const normalized = email.trim().toLowerCase()
+
+  // try to read persisted progress from Firestore if available
+  if (db) {
+    try {
+      const snap = await db.collection('dashboardProgress').doc(normalized).get()
+      if (snap.exists) {
+        const data = snap.data() as { message: string; completion: number }
+        memoryDashboardProgress.set(normalized, { message: data.message, completion: data.completion })
+      }
+    } catch (error) {
+      console.warn('[userService] Failed to read dashboard progress from Firestore, using memory.', error)
+    }
+  }
+
+  return {
+    projects: 12,
+    tasks: 34,
+    notifications: 7,
+    completion: memoryDashboardProgress.get(normalized)?.completion ?? 84,
+  }
+}
+
+export const saveDashboardMessageForUser = async (email: string, message: string) => {
+  const normalized = email.trim().toLowerCase()
+
+  // try to extract a percentage number from the message
+  const match = message.match(/(\d{1,3})/)?.[1]
+  let completion = 84
+  if (match) {
+    const parsed = Number(match)
+    if (!Number.isNaN(parsed)) {
+      completion = Math.max(0, Math.min(100, parsed))
+    }
+  } else {
+    completion = Math.max(0, Math.min(100, Math.floor((message.trim().length / 200) * 100)))
+  }
+
+  memoryDashboardProgress.set(normalized, { message, completion })
+
+  if (db) {
+    try {
+      await db.collection('dashboardProgress').doc(normalized).set({
+        message,
+        completion,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true })
+    } catch (error) {
+      console.warn('[userService] Failed to persist dashboard progress to Firestore, using memory only.', error)
+    }
+  }
+
+  return { message, completion }
+}

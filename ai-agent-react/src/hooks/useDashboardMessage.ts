@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { submitDashboardMessageWithFallback } from '../lib/apiClient'
 import type { SubmitStatus } from '../types'
 
@@ -8,6 +9,7 @@ type UseDashboardMessageArgs = {
 }
 
 export function useDashboardMessage({ accessToken, email }: UseDashboardMessageArgs) {
+  const queryClient = useQueryClient()
   const [message, setMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>({ type: 'idle', text: '' })
@@ -30,6 +32,12 @@ export function useDashboardMessage({ accessToken, email }: UseDashboardMessageA
       const result = await submitDashboardMessageWithFallback(accessToken, message)
       setSubmitStatus({ type: 'success', text: result.message })
       setMessage('')
+      // refresh dashboard stats to reflect updated progress
+      try {
+        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      } catch {
+        /* ignore */
+      }
     } catch (error) {
       setSubmitStatus({
         type: 'error',

@@ -1,4 +1,6 @@
 import type { DashboardStats } from '../types'
+import { getStoredAuthUser } from './auth'
+import { submitDashboardMessageFallback } from './mockClient'
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api').replace(/\/$/, '')
 const isRealBackendEnabled = Boolean(apiBaseUrl)
@@ -75,7 +77,7 @@ export const submitDashboardMessageToApi = async (accessToken: string, message: 
     throw new Error(`API error: ${response.status}`)
   }
 
-  return parseApiPayload<{ ok: boolean; message: string }>(response)
+  return parseApiPayload<{ ok: boolean; message: string; progress?: number }>(response)
 }
 
 export const refreshAccessToken = async (refreshToken: string) => {
@@ -112,6 +114,10 @@ export const fetchDashboardStatsWithFallback = async (accessToken: string): Prom
 }
 
 export const submitDashboardMessageWithFallback = async (accessToken: string, message: string) => {
+  if (!isRealBackendEnabled) {
+    return submitDashboardMessageFallback(accessToken, getStoredAuthUser() ?? '', message)
+  }
+
   return submitDashboardMessageToApi(accessToken, message)
 }
 

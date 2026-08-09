@@ -1,9 +1,12 @@
+import { useNavigate } from 'react-router-dom'
+
 type AccessDeniedPageProps = {
   email?: string
   reason?: 'forbidden' | 'session-expired'
 }
 
 export function AccessDeniedPage({ email, reason = 'forbidden' }: AccessDeniedPageProps) {
+  const navigate = useNavigate()
   const title = reason === 'session-expired' ? 'Sesja wygasła' : 'Nie masz dostępu do panelu'
   const description = reason === 'session-expired'
     ? 'Twoja sesja wygasła z powodu bezczynności albo upłynięcia czasu. Zaloguj się ponownie, aby wrócić do dashboardu.'
@@ -32,6 +35,15 @@ export function AccessDeniedPage({ email, reason = 'forbidden' }: AccessDeniedPa
               ? 'Sesja jest automatycznie kończona po czasie bezczynności lub po upływie limitu ważności tokena.'
               : 'W tej wersji tylko użytkownik z adresem nakoniecdnia@gmail.com może zobaczyć Dashboard.'}
           </p>
+        </div>
+        <div className="mt-6 flex">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="rounded-2xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-400"
+          >
+            Powrót do logowania
+          </button>
         </div>
       </section>
     </main>

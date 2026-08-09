@@ -4,7 +4,7 @@ import { OAuth2Client } from 'google-auth-library'
 import { z } from 'zod'
 import { env } from '../config/env.js'
 import { signTokens, verifyRefreshToken } from '../services/tokenService.js'
-import { getUserByEmail, isEmailAllowed, upsertUser } from '../services/userService.js'
+import { getUserByEmail, isEmailAllowed, upsertUser, saveDashboardMessageForUser, getDashboardStatsForUser } from '../services/userService.js'
 import { AppError } from '../utils/errors.js'
 
 const oauthClient = new OAuth2Client({
@@ -142,19 +142,17 @@ export const dashboard = async (req: Request, res: Response, next: NextFunction)
       throw new AppError(403, 'FORBIDDEN', 'User is not authenticated')
     }
 
-    const stats = await getUserByEmail(user.email)
-    if (!stats) {
+    // verify user exists / is allowed
+    const exists = await getUserByEmail(user.email)
+    if (!exists) {
       throw new AppError(403, 'FORBIDDEN', 'User is not allowed to access dashboard')
     }
 
+    const stats = await getDashboardStatsForUser(user.email)
+
     return res.json({
       success: true,
-      data: {
-        projects: 12,
-        tasks: 34,
-        notifications: 7,
-        completion: 85,
-      },
+      data: stats,
     })
   } catch (error) {
     return next(error)
@@ -173,11 +171,22 @@ export const dashboardMessage = async (req: Request, res: Response) => {
     })
   }
 
+  const user = req.user
+  if (!user?.email) {
+    return res.status(401).json({
+      success: false,
+      error: { code: 'UNAUTHORIZED', message: 'User not authenticated' },
+    })
+  }
+
+  const saved = await saveDashboardMessageForUser(user.email, parsed.data.message)
+
   return res.json({
     success: true,
     data: {
       ok: true,
       message: `Wysłano do backendu: ${parsed.data.message}`,
+      progress: saved.completion,
     },
   })
 }
