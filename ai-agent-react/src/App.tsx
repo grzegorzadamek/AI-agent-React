@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AccessDeniedPage } from './components/AccessDeniedPage'
 import { CallbackPage } from './components/CallbackPage'
 import { DashboardPage } from './components/DashboardPage'
@@ -20,6 +20,8 @@ function App() {
     handleLogout,
     isDashboardAccessible,
   } = useAuth()
+  const location = useLocation()
+  const emailFromQuery = new URLSearchParams(location.search).get('email') ?? undefined
 
   return (
     <Routes>
@@ -55,14 +57,10 @@ function App() {
       <Route
         path="/access-denied"
         element={
-          authUser || sessionNotice || accessDeniedEmail ? (
-            <AccessDeniedPage
-              email={authUser?.email ?? accessDeniedEmail ?? undefined}
-              reason={sessionNotice ? 'session-expired' : 'forbidden'}
-            />
-          ) : (
-            <Navigate to="/" replace />
-          )
+          <AccessDeniedPage
+            email={authUser?.email ?? accessDeniedEmail ?? emailFromQuery}
+            reason={sessionNotice ? 'session-expired' : 'forbidden'}
+          />
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />

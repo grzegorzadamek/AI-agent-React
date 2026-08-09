@@ -153,7 +153,7 @@ export const dashboard = async (req: Request, res: Response, next: NextFunction)
         projects: 12,
         tasks: 34,
         notifications: 7,
-        completion: 84,
+        completion: 85,
       },
     })
   } catch (error) {
