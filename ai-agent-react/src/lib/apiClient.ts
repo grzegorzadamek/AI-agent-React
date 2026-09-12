@@ -1,12 +1,9 @@
 import type { DashboardStats, UserProfile } from '../types'
-import { getStoredAuthUser } from './auth'
-import { submitDashboardMessageFallback } from './mockClient'
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api').replace(
   /\/$/,
   '',
 )
-const isRealBackendEnabled = Boolean(apiBaseUrl)
 
 type ApiEnvelope<T> = {
   success: boolean
@@ -27,22 +24,20 @@ export class ApiError extends Error {
   }
 }
 
-const buildHeaders = (accessToken?: string) => {
+const buildHeaders = () => {
   const headers = new Headers({
     'Content-Type': 'application/json',
   })
 
-  if (accessToken) {
-    headers.set('Authorization', `Bearer ${accessToken}`)
-  }
-
   return headers
 }
 
-const requestInit = (accessToken?: string): RequestInit => ({
+const requestInit = (): RequestInit => ({
   credentials: 'include',
-  headers: buildHeaders(accessToken),
+  headers: buildHeaders(),
 })
+
+let refreshPromise: Promise<void> | null = null
 
 const parseJson = async <T>(response: Response): Promise<T> => {
   const text = await response.text()
@@ -63,13 +58,9 @@ const parseApiPayload = async <T>(response: Response): Promise<T> => {
   return payload.data
 }
 
-export const fetchDashboardStats = async (accessToken?: string): Promise<DashboardStats> => {
-  if (!isRealBackendEnabled) {
-    throw new Error('Real backend not configured')
-  }
-
-  const response = await fetch(`${apiBaseUrl}/dashboard`, {
-    ...requestInit(accessToken),
+export const fetchDashboardStats = async (): Promise<DashboardStats> => {
+  const response = await requestWithAuth(`${apiBaseUrl}/dashboard`, {
+    ...requestInit(),
     method: 'GET',
   })
 
@@ -81,11 +72,7 @@ export const fetchDashboardStats = async (accessToken?: string): Promise<Dashboa
 }
 
 export const fetchCurrentUser = async () => {
-  if (!isRealBackendEnabled) {
-    throw new Error('Real backend not configured')
-  }
-
-  const response = await fetch(`${apiBaseUrl}/me`, requestInit())
+  const response = await requestWithAuth(`${apiBaseUrl}/me`, requestInit())
   if (!response.ok) {
     throw new ApiError(`API error: ${response.status}`, response.status)
   }
@@ -94,10 +81,6 @@ export const fetchCurrentUser = async () => {
 }
 
 export const fetchPublicDashboardMessage = async (): Promise<string> => {
-  if (!isRealBackendEnabled) {
-    return ''
-  }
-
   const response = await fetch(`${apiBaseUrl}/public/message`, {
     ...requestInit(),
     method: 'GET',
@@ -112,11 +95,7 @@ export const fetchPublicDashboardMessage = async (): Promise<string> => {
 }
 
 export const submitDashboardMessageToApi = async (message: string) => {
-  if (!isRealBackendEnabled) {
-    throw new Error('Real backend not configured')
-  }
-
-  const response = await fetch(`${apiBaseUrl}/dashboard/message`, {
+  const response = await requestWithAuth(`${apiBaseUrl}/dashboard/message`, {
     ...requestInit(),
     method: 'POST',
     body: JSON.stringify({ message }),
@@ -130,10 +109,6 @@ export const submitDashboardMessageToApi = async (message: string) => {
 }
 
 export const refreshAccessToken = async () => {
-  if (!isRealBackendEnabled) {
-    throw new Error('Real backend not configured')
-  }
-
   const response = await fetch(`${apiBaseUrl}/auth/refresh`, {
     ...requestInit(),
     method: 'POST',
@@ -143,32 +118,32 @@ export const refreshAccessToken = async () => {
     throw new ApiError(`API error: ${response.status}`, response.status)
   }
 
-  return parseApiPayload<{ accessToken: string; refreshToken: string; expiresIn: number }>(response)
+  await parseApiPayload<{ expiresIn: number }>(response)
+}
+
+const refreshOnce = async () => {
+  if (!refreshPromise) {
+    refreshPromise = refreshAccessToken().finally(() => {
+      refreshPromise = null
+    })
+  }
+
+  return refreshPromise
+}
+
+const requestWithAuth = async (url: string, init: RequestInit): Promise<Response> => {
+  const response = await fetch(url, init)
+  if (response.status !== 401) {
+    return response
+  }
+
+  await refreshOnce()
+  return fetch(url, init)
 }
 
 export const logoutFromApi = async () => {
-  if (!isRealBackendEnabled) {
-    return
-  }
-
   await fetch(`${apiBaseUrl}/auth/logout`, {
     ...requestInit(),
     method: 'POST',
   })
 }
-
-export const fetchDashboardStatsWithFallback = async (
-  accessToken?: string,
-): Promise<DashboardStats> => {
-  return fetchDashboardStats(accessToken)
-}
-
-export const submitDashboardMessageWithFallback = async (message: string) => {
-  if (!isRealBackendEnabled) {
-    return submitDashboardMessageFallback('', getStoredAuthUser() ?? '', message)
-  }
-
-  return submitDashboardMessageToApi(message)
-}
-
-export const isRealBackendAvailable = isRealBackendEnabled

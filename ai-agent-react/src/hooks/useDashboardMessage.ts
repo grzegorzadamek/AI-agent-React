@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { submitDashboardMessageWithFallback } from '../lib/apiClient'
+import { submitDashboardMessageToApi } from '../lib/apiClient'
 import type { SubmitStatus } from '../types'
 
 export function useDashboardMessage() {
@@ -19,7 +19,7 @@ export function useDashboardMessage() {
     setSubmitStatus({ type: 'idle', text: '' })
 
     try {
-      const result = await submitDashboardMessageWithFallback(message.trim())
+      const result = await submitDashboardMessageToApi(message.trim())
       setSubmitStatus({ type: 'success', text: result.message })
       setMessage('')
       // refresh dashboard stats to reflect updated progress

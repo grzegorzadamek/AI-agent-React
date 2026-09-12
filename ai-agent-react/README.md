@@ -282,12 +282,11 @@ http://localhost:5173
 
 ## Next steps before production
 
-1. Add Authorization Code + PKCE if the OAuth client is deployed across separate sites.
-2. Validate tokens on the backend for every protected route.
-3. Refresh tokens are rotated and revoked on logout. In production, Firebase must be configured; the backend does not fall back to in-memory persistence.
-4. Add CSRF protection if cookie settings change to `SameSite=None`.
-5. Add monitoring and structured logging.
-6. Use HTTPS in production.
+1. Validate tokens on the backend for every protected route.
+2. Refresh tokens are rotated and revoked on logout. In production, Firebase must be configured; the backend does not fall back to in-memory persistence.
+3. Add CSRF protection if cookie settings change to `SameSite=None`.
+4. Add monitoring and structured logging.
+5. Use HTTPS in production.
 
 ## Copilot instructions for creating the Node.js backend
 

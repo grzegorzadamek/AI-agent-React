@@ -33,7 +33,7 @@ describe('useDashboardMessage', () => {
   })
 
   it('returns API errors to the user', async () => {
-    vi.spyOn(apiClient, 'submitDashboardMessageWithFallback').mockRejectedValue(
+    vi.spyOn(apiClient, 'submitDashboardMessageToApi').mockRejectedValue(
       new Error('Sesja wygasła.'),
     )
     const result = renderDashboardMessageHook()
@@ -63,7 +63,7 @@ describe('useDashboardMessage', () => {
 
   it('submits a message and clears the input on success', async () => {
     const mockResponse = { ok: true, message: 'Mock message sent' }
-    vi.spyOn(apiClient, 'submitDashboardMessageWithFallback').mockResolvedValue(mockResponse)
+    vi.spyOn(apiClient, 'submitDashboardMessageToApi').mockResolvedValue(mockResponse)
 
     const result = renderDashboardMessageHook()
 
@@ -75,7 +75,7 @@ describe('useDashboardMessage', () => {
       await result.current?.handleSubmit()
     })
 
-    expect(apiClient.submitDashboardMessageWithFallback).toHaveBeenCalledWith('Hello from test')
+    expect(apiClient.submitDashboardMessageToApi).toHaveBeenCalledWith('Hello from test')
     expect(result.current?.submitStatus).toEqual({ type: 'success', text: mockResponse.message })
     expect(result.current?.message).toBe('')
   })

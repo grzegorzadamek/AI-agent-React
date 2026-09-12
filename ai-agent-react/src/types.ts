@@ -18,13 +18,6 @@ export type DashboardStats = {
   completion: number
 }
 
-export type AuthResult = {
-  authorized: boolean
-  user: UserProfile | null
-  accessToken: string | null
-  reason?: string
-}
-
 export type SubmitStatus = {
   type: 'idle' | 'success' | 'error'
   text: string

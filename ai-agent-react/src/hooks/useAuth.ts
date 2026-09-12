@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate } from 'react-router-dom'
-import {
-  ApiError,
-  fetchCurrentUser,
-  fetchDashboardStatsWithFallback,
-  logoutFromApi,
-  refreshAccessToken,
-} from '../lib/apiClient'
+import { fetchCurrentUser, fetchDashboardStats, logoutFromApi } from '../lib/apiClient'
 import { authStorage } from '../utils/authStorage'
 import { buildGoogleOAuthUrl, getStoredAuthUser, persistAuthSession } from '../lib/auth'
 import type { UserProfile } from '../types'
@@ -33,6 +27,7 @@ export function useAuth() {
   const [callbackStatus, setCallbackStatus] = useState<CallbackStatus>('processing')
   const [sessionNotice, setSessionNotice] = useState<string | null>(null)
   const [accessDeniedEmail, setAccessDeniedEmail] = useState<string | null>(null)
+  const [isSessionReady, setIsSessionReady] = useState(false)
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const location = useLocation()
@@ -56,6 +51,29 @@ export function useAuth() {
   const touchSession = useCallback(() => {
     authStorage.touchSession()
   }, [])
+
+  useEffect(() => {
+    if (location.pathname === '/auth/callback') return undefined
+
+    let cancelled = false
+    void fetchCurrentUser()
+      .then((user) => {
+        if (cancelled) return
+        persistAuthSession(user)
+        touchSession()
+        setAuthUser(user)
+      })
+      .catch(() => {
+        if (!cancelled) clearSession('logout')
+      })
+      .finally(() => {
+        if (!cancelled) setIsSessionReady(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [clearSession, location.pathname, touchSession])
 
   useEffect(() => {
     if (!authStorage.isSessionValid()) {
@@ -132,20 +150,9 @@ export function useAuth() {
     queryFn: async () => {
       if (!authUser) throw new Error('Missing auth context')
 
-      try {
-        const stats = await fetchDashboardStatsWithFallback()
-        touchSession()
-        return stats
-      } catch (error) {
-        if (!(error instanceof ApiError) || error.status !== 401) {
-          throw error
-        }
-
-        await refreshAccessToken()
-        touchSession()
-
-        return fetchDashboardStatsWithFallback()
-      }
+      const stats = await fetchDashboardStats()
+      touchSession()
+      return stats
     },
     enabled: Boolean(authUser && authStorage.isSessionValid()),
     staleTime: 60_000,
@@ -206,6 +213,8 @@ export function useAuth() {
           navigate('/access-denied', { replace: true })
         })
         console.error(fetchError)
+      } finally {
+        setIsSessionReady(true)
       }
     })()
   }, [clearSession, location.pathname, location.search, navigate, queryClient, touchSession])
@@ -236,6 +245,7 @@ export function useAuth() {
     loginMutation,
     handleGoogleLogin,
     handleLogout,
-    isDashboardAccessible,
+    isDashboardAccessible: isSessionReady && isDashboardAccessible,
+    isSessionReady,
   }
 }

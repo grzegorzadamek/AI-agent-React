@@ -40,7 +40,7 @@ vi.mock('../lib/apiClient', () => ({
     plan: 'Pro',
     avatar: 'TU',
   })),
-  fetchDashboardStatsWithFallback: vi.fn(async () => ({
+  fetchDashboardStats: vi.fn(async () => ({
     projects: 1,
     tasks: 2,
     notifications: 3,

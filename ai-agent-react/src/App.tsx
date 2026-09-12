@@ -18,6 +18,7 @@ function App() {
     handleGoogleLogin,
     handleLogout,
     isDashboardAccessible,
+    isSessionReady,
   } = useAuth()
   const location = useLocation()
   const emailFromQuery = new URLSearchParams(location.search).get('email') ?? undefined
@@ -41,6 +42,7 @@ function App() {
         element={
           <ProtectedRoute
             condition={isDashboardAccessible}
+            loading={!isSessionReady ? <CallbackPage status="processing" /> : undefined}
             fallback={
               <AccessDeniedPage email={authUser?.email ?? accessDeniedEmail ?? undefined} />
             }
