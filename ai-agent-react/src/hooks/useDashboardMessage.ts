@@ -1,9 +1,11 @@
 import { useCallback, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { submitDashboardMessageToApi } from '../lib/apiClient'
+import { useTranslation } from 'react-i18next'
+import { ApiError, submitDashboardMessageToApi } from '../lib/apiClient'
 import type { SubmitStatus } from '../types'
 
 export function useDashboardMessage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [message, setMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -11,7 +13,7 @@ export function useDashboardMessage() {
 
   const handleSubmit = useCallback(async () => {
     if (!message.trim()) {
-      setSubmitStatus({ type: 'error', text: 'Wpisz wiadomość przed wysłaniem.' })
+      setSubmitStatus({ type: 'error', text: t('message.emptyError') })
       return
     }
 
@@ -19,8 +21,12 @@ export function useDashboardMessage() {
     setSubmitStatus({ type: 'idle', text: '' })
 
     try {
-      const result = await submitDashboardMessageToApi(message.trim())
-      setSubmitStatus({ type: 'success', text: result.message })
+      const submittedMessage = message.trim()
+      await submitDashboardMessageToApi(submittedMessage)
+      setSubmitStatus({
+        type: 'success',
+        text: t('message.submitSuccess', { message: submittedMessage }),
+      })
       setMessage('')
       // refresh dashboard stats to reflect updated progress
       try {
@@ -31,12 +37,15 @@ export function useDashboardMessage() {
     } catch (error) {
       setSubmitStatus({
         type: 'error',
-        text: error instanceof Error ? error.message : 'Wystąpił błąd podczas wysyłania.',
+        text:
+          error instanceof ApiError && error.status === 401
+            ? t('message.sessionError')
+            : t('message.genericError'),
       })
     } finally {
       setIsSubmitting(false)
     }
-  }, [message, queryClient])
+  }, [message, queryClient, t])
 
   return {
     message,

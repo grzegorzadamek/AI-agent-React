@@ -1,0 +1,74 @@
+{
+  "login": {
+    "workspaceBadge": "Bezpieczna przestrzeń AI",
+    "title": "Zaloguj się i zacznij pracę w swoim panelu.",
+    "description": "Współpracuj z zespołem, monitoruj postępy i zarządzaj zadaniami bezpośrednio po wejściu do aplikacji.",
+    "securityTitle": "Bezpieczne logowanie",
+    "securityDescription": "Flow jest podpięty pod OAuth Google. Po powrocie z Google aplikacja finalizuje sesję i przekierowuje do dashboardu.",
+    "welcomeBack": "Witaj ponownie",
+    "heading": "Zaloguj się przez Google",
+    "instructions": "Kliknij przycisk poniżej, aby rozpocząć autoryzację i przejść do panelu zarządzania.",
+    "loginButton": "Kontynuuj z Google",
+    "loginInProgress": "Trwa logowanie...",
+    "processStatus": "Status procesu",
+    "inProgress": "W toku",
+    "ready": "Gotowe",
+    "authStep": {
+      "idle": "Kliknij przycisk, aby rozpocząć logowanie przez Google.",
+      "redirecting": "Przekierowuję do Google…",
+      "authenticating": "Trwa autoryzacja konta…",
+      "success": "Logowanie zakończone. Przekierowuję do dashboardu…"
+    },
+    "loadingMessage": "Pobieram ostatnią wiadomość...",
+    "messageUnavailable": "Wiadomość jest chwilowo niedostępna."
+  },
+  "dashboard": {
+    "label": "Dashboard",
+    "greeting": "Witaj, {{name}}",
+    "projects": "Projekty",
+    "tasks": "Zadania",
+    "notifications": "Powiadomienia",
+    "progress": "Postęp",
+    "dataDescription": "Dane są pobierane przez TanStack Query i mogą być łatwo wymienione na prawdziwy backend."
+  },
+  "message": {
+    "label": "Wiadomość do backendu",
+    "heading": "Napisz coś i wyślij POSTem",
+    "send": "Wyślij",
+    "sending": "Wysyłam…",
+    "placeholder": "Wpisz wiadomość, którą backend ma odebrać...",
+    "submitSuccess": "Wysłano do backendu: {{message}}",
+    "emptyError": "Wpisz wiadomość przed wysłaniem.",
+    "sessionError": "Sesja wygasła. Zaloguj się ponownie.",
+    "genericError": "Wystąpił błąd podczas wysyłania."
+  },
+  "accessDenied": {
+    "label": "Dostęp zablokowany",
+    "expiredTitle": "Sesja wygasła",
+    "forbiddenTitle": "Nie masz dostępu do panelu",
+    "expiredDescription": "Twoja sesja wygasła z powodu bezczynności albo upłynięcia czasu. Zaloguj się ponownie, aby wrócić do dashboardu.",
+    "emailDescription": "Konto {{email}} nie jest dopuszczone do tej aplikacji.",
+    "forbiddenDescription": "To konto nie ma uprawnień do wejścia do dashboardu.",
+    "accessCheckTitle": "Sprawdzanie dostępu",
+    "expiredAccessDescription": "Sesja jest automatycznie kończona po czasie bezczynności lub po upływie limitu ważności.",
+    "forbiddenAccessDescription": "To konto nie ma uprawnień do wyświetlenia dashboardu.",
+    "backToLogin": "Powrót do logowania"
+  },
+  "callback": {
+    "label": "Google OAuth",
+    "processingTitle": "Kończymy logowanie",
+    "errorTitle": "Nie udało się zakończyć logowania",
+    "processingDescription": "Udało się wrócić z Google. Trwa finalizacja sesji i przekierowanie do panelu.",
+    "errorDescription": "Podczas powrotu z Google wystąpił problem. Spróbuj ponownie."
+  },
+  "auth": {
+    "sessionExpired": "Twoja sesja wygasła z powodu bezczynności lub upłynięcia czasu. Zaloguj się ponownie, aby kontynuować.",
+    "missingContext": "Brak kontekstu sesji. Zaloguj się ponownie.",
+    "logoutFailed": "Nie udało się połączyć z serwerem. Sesja została wyczyszczona lokalnie."
+  },
+  "profile": {
+    "dashboard": "Dashboard",
+    "greeting": "Witaj, {{name}}",
+    "logout": "Wyloguj się"
+  }
+}

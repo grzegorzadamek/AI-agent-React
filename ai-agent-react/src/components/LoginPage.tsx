@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { fetchPublicDashboardMessage } from '../lib/apiClient'
 
 type LoginPageProps = {
@@ -8,14 +9,8 @@ type LoginPageProps = {
   sessionNotice?: string | null
 }
 
-const authStepLabels: Record<LoginPageProps['authStep'], string> = {
-  idle: 'Kliknij przycisk, aby rozpocząć logowanie przez Google.',
-  redirecting: 'Przekierowuję do Google…',
-  authenticating: 'Trwa autoryzacja konta…',
-  success: 'Logowanie zakończone. Przekierowuję do dashboardu…',
-}
-
 export function LoginPage({ onLogin, isLoading, authStep, sessionNotice }: LoginPageProps) {
+  const { t } = useTranslation()
   const publicMessageQuery = useQuery({
     queryKey: ['public-dashboard-message'],
     queryFn: fetchPublicDashboardMessage,
@@ -30,35 +25,29 @@ export function LoginPage({ onLogin, isLoading, authStep, sessionNotice }: Login
           <div className="flex flex-col justify-between bg-gradient-to-br from-violet-600 via-fuchsia-500 to-cyan-400 p-8 sm:p-10 lg:p-12">
             <div>
               <div className="mb-5 inline-flex rounded-full border border-white/30 bg-white/15 px-3 py-1 text-sm font-medium text-white/90">
-                Secure AI workspace
+                {t('login.workspaceBadge')}
               </div>
               <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-                Zaloguj się i zacznij pracę w swoim panelu.
+                {t('login.title')}
               </h1>
               <p className="mt-4 max-w-xl text-base text-white/80 sm:text-lg">
-                Współpracuj z zespołem, monitoruj postępy i zarządzaj zadaniami bezpośrednio po
-                wejściu do aplikacji.
+                {t('login.description')}
               </p>
             </div>
 
             <div className="mt-8 rounded-3xl border border-white/20 bg-slate-950/20 p-5 text-sm text-white/85">
-              <p className="font-semibold">Bezpieczne logowanie</p>
-              <p className="mt-2 leading-6 text-white/80">
-                Obecnie flow jest podpięte pod OAuth w stylu Google. Po powrocie z Google aplikacja
-                finalizuje sesję i przekierowuje do dashboardu.
-              </p>
+              <p className="font-semibold">{t('login.securityTitle')}</p>
+              <p className="mt-2 leading-6 text-white/80">{t('login.securityDescription')}</p>
             </div>
           </div>
 
           <div className="flex flex-col justify-center bg-slate-950/90 px-8 py-10 sm:px-10 lg:px-12">
             <div className="mb-8">
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-violet-400">
-                Welcome back
+                {t('login.welcomeBack')}
               </p>
-              <h2 className="mt-2 text-3xl font-semibold text-white">Zaloguj się przez Google</h2>
-              <p className="mt-3 text-sm leading-6 text-slate-400">
-                Kliknij przycisk poniżej, aby rozpocząć autoryzację i przejść do panelu zarządzania.
-              </p>
+              <h2 className="mt-2 text-3xl font-semibold text-white">{t('login.heading')}</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-400">{t('login.instructions')}</p>
             </div>
 
             <button
@@ -70,17 +59,17 @@ export function LoginPage({ onLogin, isLoading, authStep, sessionNotice }: Login
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
                 G
               </span>
-              {isLoading ? 'Trwa logowanie...' : 'Kontynuuj z Google'}
+              {isLoading ? t('login.loginInProgress') : t('login.loginButton')}
             </button>
 
             <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-400">
               <div className="flex items-center justify-between">
-                <p className="font-medium text-slate-200">Status procesu</p>
+                <p className="font-medium text-slate-200">{t('login.processStatus')}</p>
                 <span className="rounded-full border border-violet-500/20 bg-violet-500/10 px-2.5 py-1 text-xs font-medium text-violet-300">
-                  {isLoading ? 'W toku' : 'Gotowe'}
+                  {isLoading ? t('login.inProgress') : t('login.ready')}
                 </span>
               </div>
-              <p className="mt-2 leading-6">{authStepLabels[authStep]}</p>
+              <p className="mt-2 leading-6">{t(`login.authStep.${authStep}`)}</p>
               {sessionNotice ? (
                 <p className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-amber-300">
                   {sessionNotice}
@@ -101,10 +90,10 @@ export function LoginPage({ onLogin, isLoading, authStep, sessionNotice }: Login
               </div>
             </div>
             {publicMessageQuery.isPending ? (
-              <p className="mt-5 text-sm text-slate-500">Pobieram ostatnią wiadomość...</p>
+              <p className="mt-5 text-sm text-slate-500">{t('login.loadingMessage')}</p>
             ) : null}
             {publicMessageQuery.isError ? (
-              <p className="mt-5 text-sm text-slate-500">Wiadomość jest chwilowo niedostępna.</p>
+              <p className="mt-5 text-sm text-slate-500">{t('login.messageUnavailable')}</p>
             ) : null}
             {publicMessageQuery.data ? (
               <div className="mt-5 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4">

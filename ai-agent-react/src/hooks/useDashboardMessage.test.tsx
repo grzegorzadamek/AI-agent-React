@@ -34,7 +34,7 @@ describe('useDashboardMessage', () => {
 
   it('returns API errors to the user', async () => {
     vi.spyOn(apiClient, 'submitDashboardMessageToApi').mockRejectedValue(
-      new Error('Sesja wygasła.'),
+      new apiClient.ApiError('API error: 401', 401),
     )
     const result = renderDashboardMessageHook()
     await act(async () => {
@@ -45,7 +45,10 @@ describe('useDashboardMessage', () => {
       await result.current?.handleSubmit()
     })
 
-    expect(result.current?.submitStatus).toEqual({ type: 'error', text: 'Sesja wygasła.' })
+    expect(result.current?.submitStatus).toEqual({
+      type: 'error',
+      text: 'Sesja wygasła. Zaloguj się ponownie.',
+    })
   })
 
   it('returns error when message is empty', async () => {
@@ -76,7 +79,10 @@ describe('useDashboardMessage', () => {
     })
 
     expect(apiClient.submitDashboardMessageToApi).toHaveBeenCalledWith('Hello from test')
-    expect(result.current?.submitStatus).toEqual({ type: 'success', text: mockResponse.message })
+    expect(result.current?.submitStatus).toEqual({
+      type: 'success',
+      text: `Wysłano do backendu: Hello from test`,
+    })
     expect(result.current?.message).toBe('')
   })
 })

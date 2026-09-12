@@ -1,4 +1,5 @@
 import { useDashboardMessage } from '../hooks/useDashboardMessage'
+import { useTranslation } from 'react-i18next'
 import type { DashboardStats, UserProfile } from '../types'
 import { MessageSection } from './MessageSection'
 import { StatCard } from './StatCard'
@@ -12,6 +13,7 @@ type DashboardPageProps = {
 }
 
 export function DashboardPage({ user, stats, isLoading, onLogout }: DashboardPageProps) {
+  const { t } = useTranslation()
   const { message, setMessage, isSubmitting, submitStatus, handleSubmit } = useDashboardMessage()
 
   const safeStats: DashboardStats = {
@@ -29,21 +31,26 @@ export function DashboardPage({ user, stats, isLoading, onLogout }: DashboardPag
         <section className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
           <div className="rounded-[28px] border border-white/10 bg-slate-900/70 p-6 shadow-[0_18px_70px_rgba(0,0,0,0.35)]">
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              <StatCard label="Projekty" value={isLoading ? '…' : safeStats.projects} />
-              <StatCard label="Zadania" value={isLoading ? '…' : safeStats.tasks} />
-              <StatCard label="Powiadomienia" value={isLoading ? '…' : safeStats.notifications} />
+              <StatCard
+                label={t('dashboard.projects')}
+                value={isLoading ? '…' : safeStats.projects}
+              />
+              <StatCard label={t('dashboard.tasks')} value={isLoading ? '…' : safeStats.tasks} />
+              <StatCard
+                label={t('dashboard.notifications')}
+                value={isLoading ? '…' : safeStats.notifications}
+              />
             </div>
           </div>
 
           <div className="rounded-[28px] border border-white/10 bg-gradient-to-br from-violet-600/90 to-cyan-500/90 p-6 shadow-[0_18px_70px_rgba(0,0,0,0.35)]">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/80">Postęp</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/80">
+              {t('dashboard.progress')}
+            </p>
             <p className="mt-3 text-5xl font-semibold text-white">
               {isLoading ? '…' : `${safeStats.completion}%`}
             </p>
-            <p className="mt-3 text-sm leading-6 text-white/80">
-              Dane są pobierane przez TanStack Query i mogą być łatwo wymienione na prawdziwy
-              backend.
-            </p>
+            <p className="mt-3 text-sm leading-6 text-white/80">{t('dashboard.dataDescription')}</p>
           </div>
         </section>
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { fetchCurrentUser, fetchDashboardStats, logoutFromApi } from '../lib/apiClient'
 import { authStorage } from '../utils/authStorage'
 import { buildGoogleOAuthUrl, getStoredAuthUser, persistAuthSession } from '../lib/auth'
@@ -12,6 +13,7 @@ type CallbackStatus = 'processing' | 'error'
 const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000
 
 export function useAuth() {
+  const { t } = useTranslation()
   const [authUser, setAuthUser] = useState<UserProfile | null>(() => {
     const storedValue = getStoredAuthUser()
     if (!storedValue) return null
@@ -36,16 +38,12 @@ export function useAuth() {
     (reason: 'expired' | 'logout' = 'expired') => {
       setAuthUser(null)
       setAuthStep('idle')
-      setSessionNotice(
-        reason === 'expired'
-          ? 'Twoja sesja wygasła z powodu bezczynności lub upłynięcia czasu. Zaloguj się ponownie, aby kontynuować.'
-          : null,
-      )
+      setSessionNotice(reason === 'expired' ? t('auth.sessionExpired') : null)
       setAccessDeniedEmail(null)
       authStorage.clearSession()
       queryClient.clear()
     },
-    [queryClient],
+    [queryClient, t],
   )
 
   const touchSession = useCallback(() => {
@@ -148,7 +146,7 @@ export function useAuth() {
   const dashboardQuery = useQuery({
     queryKey: ['dashboard-stats', authUser?.email],
     queryFn: async () => {
-      if (!authUser) throw new Error('Missing auth context')
+      if (!authUser) throw new Error(t('auth.missingContext'))
 
       const stats = await fetchDashboardStats()
       touchSession()
