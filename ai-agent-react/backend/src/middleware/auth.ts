@@ -1,16 +1,19 @@
 import type { NextFunction, Request, Response } from 'express'
 import { AppError } from '../utils/errors.js'
 import { verifyAccessToken } from '../services/tokenService.js'
+import { ACCESS_TOKEN_COOKIE, getCookie } from '../utils/sessionCookies.js'
 
 export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   const authorization = req.headers.authorization
+  const accessToken = authorization?.startsWith('Bearer ')
+    ? authorization.slice(7).trim()
+    : getCookie(req.headers.cookie, ACCESS_TOKEN_COOKIE)
 
-  if (!authorization?.startsWith('Bearer ')) {
+  if (!accessToken) {
     return next(new AppError(401, 'UNAUTHORIZED', 'Missing or invalid bearer token'))
   }
 
   try {
-    const accessToken = authorization.slice(7).trim()
     const payload = verifyAccessToken(accessToken)
 
     req.user = {

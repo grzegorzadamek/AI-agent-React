@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { fetchDashboardStatsWithFallback, refreshAccessToken } from '../lib/apiClient'
-import { ACCESS_TOKEN_KEY, authStorage } from '../utils/authStorage'
 import {
-  buildGoogleOAuthUrl,
-  getStoredAccessToken,
-  getStoredAuthUser,
-  getStoredRefreshToken,
-  persistAuthSession,
-} from '../lib/auth'
+  ApiError,
+  fetchCurrentUser,
+  fetchDashboardStatsWithFallback,
+  logoutFromApi,
+  refreshAccessToken,
+} from '../lib/apiClient'
+import { authStorage } from '../utils/authStorage'
+import { buildGoogleOAuthUrl, getStoredAuthUser, persistAuthSession } from '../lib/auth'
 import type { UserProfile } from '../types'
 
 type AuthStep = 'idle' | 'redirecting' | 'authenticating' | 'success'
@@ -20,10 +20,15 @@ const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000
 export function useAuth() {
   const [authUser, setAuthUser] = useState<UserProfile | null>(() => {
     const storedValue = getStoredAuthUser()
-    return storedValue ? (JSON.parse(storedValue) as UserProfile) : null
+    if (!storedValue) return null
+    try {
+      return JSON.parse(storedValue) as UserProfile
+    } catch {
+      authStorage.clearSession()
+      return null
+    }
   })
 
-  const [accessToken, setAccessToken] = useState<string | null>(() => getStoredAccessToken())
   const [authStep, setAuthStep] = useState<AuthStep>('idle')
   const [callbackStatus, setCallbackStatus] = useState<CallbackStatus>('processing')
   const [sessionNotice, setSessionNotice] = useState<string | null>(null)
@@ -35,7 +40,6 @@ export function useAuth() {
   const clearSession = useCallback(
     (reason: 'expired' | 'logout' = 'expired') => {
       setAuthUser(null)
-      setAccessToken(null)
       setAuthStep('idle')
       setSessionNotice(
         reason === 'expired'
@@ -55,7 +59,7 @@ export function useAuth() {
 
   useEffect(() => {
     if (!authStorage.isSessionValid()) {
-      if (authUser || accessToken) {
+      if (authUser) {
         queueMicrotask(() => {
           clearSession('expired')
           if (location.pathname === '/dashboard') {
@@ -66,20 +70,25 @@ export function useAuth() {
       return
     }
 
-    if (authUser && accessToken) {
+    if (authUser) {
       queueMicrotask(() => setAccessDeniedEmail(null))
     }
-  }, [accessToken, authUser, clearSession, location.pathname, navigate])
+  }, [authUser, clearSession, location.pathname, navigate])
 
   useEffect(() => {
-    if (!authUser || !accessToken || !authStorage.isSessionValid()) {
+    if (!authUser || !authStorage.isSessionValid()) {
       return undefined
     }
 
     let timeoutId: number | undefined
+    let lastTouchAt = 0
 
     const resetInactivityTimer = () => {
-      touchSession()
+      const now = Date.now()
+      if (now - lastTouchAt >= 30_000) {
+        lastTouchAt = now
+        touchSession()
+      }
       window.clearTimeout(timeoutId)
       timeoutId = window.setTimeout(() => {
         clearSession('expired')
@@ -101,11 +110,9 @@ export function useAuth() {
 
     return () => {
       events.forEach((event) => window.removeEventListener(event, resetInactivityTimer))
-      if (timeoutId) {
-        window.clearTimeout(timeoutId)
-      }
+      if (timeoutId) window.clearTimeout(timeoutId)
     }
-  }, [authUser, accessToken, clearSession, navigate, touchSession])
+  }, [authUser, clearSession, navigate, touchSession])
 
   const loginMutation = useMutation({
     mutationFn: async () => {
@@ -123,24 +130,24 @@ export function useAuth() {
   const dashboardQuery = useQuery({
     queryKey: ['dashboard-stats', authUser?.email],
     queryFn: async () => {
-      if (!authUser || !accessToken) {
-        throw new Error('Missing auth context')
+      if (!authUser) throw new Error('Missing auth context')
+
+      try {
+        const stats = await fetchDashboardStatsWithFallback()
+        touchSession()
+        return stats
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.status !== 401) {
+          throw error
+        }
+
+        await refreshAccessToken()
+        touchSession()
+
+        return fetchDashboardStatsWithFallback()
       }
-
-      const refreshToken = getStoredRefreshToken()
-      if (!refreshToken) {
-        throw new Error('Missing refresh token')
-      }
-
-      const refreshedSession = await refreshAccessToken(refreshToken)
-      setAccessToken(refreshedSession.accessToken)
-      authStorage.write(ACCESS_TOKEN_KEY, refreshedSession.accessToken)
-      persistAuthSession(authUser, refreshedSession.accessToken, refreshedSession.refreshToken)
-      touchSession()
-
-      return fetchDashboardStatsWithFallback(refreshedSession.accessToken)
     },
-    enabled: Boolean(authUser && accessToken),
+    enabled: Boolean(authUser && authStorage.isSessionValid()),
     staleTime: 60_000,
     retry: false,
   })
@@ -164,11 +171,7 @@ export function useAuth() {
       return undefined
     }
 
-    const params = new URLSearchParams(location.search)
-    const error = params.get('error')
-    const accessToken = params.get('accessToken') ?? params.get('access_token')
-    const refreshToken = params.get('refreshToken') ?? params.get('refresh_token')
-    const encodedUser = params.get('user')
+    const error = new URLSearchParams(location.search).get('error')
 
     if (error) {
       queueMicrotask(() => {
@@ -178,59 +181,40 @@ export function useAuth() {
       return undefined
     }
 
-    if (!accessToken || !refreshToken || !encodedUser) {
-      return undefined
-    }
-
     queueMicrotask(() => {
       setAuthStep('authenticating')
       setCallbackStatus('processing')
     })
 
-    try {
-      const authenticatedUser = JSON.parse(decodeURIComponent(encodedUser)) as UserProfile
-
-      queueMicrotask(() => {
-        setAuthUser(authenticatedUser)
-        setAccessToken(accessToken)
-        setAuthStep('success')
-        setAccessDeniedEmail(null)
-      })
-      persistAuthSession(authenticatedUser, accessToken, refreshToken)
-      touchSession()
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
-      navigate('/dashboard', { replace: true })
-    } catch (fetchError) {
-      queueMicrotask(() => {
-        clearSession('logout')
-        setCallbackStatus('error')
-        setAuthStep('idle')
-        navigate('/access-denied', { replace: true })
-      })
-      console.error(fetchError)
-    }
-
-    return undefined
+    void (async () => {
+      try {
+        const authenticatedUser = await fetchCurrentUser()
+        persistAuthSession(authenticatedUser)
+        touchSession()
+        queueMicrotask(() => {
+          setAuthUser(authenticatedUser)
+          setAuthStep('success')
+          setAccessDeniedEmail(null)
+        })
+        await queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+        navigate('/dashboard', { replace: true })
+      } catch (fetchError) {
+        queueMicrotask(() => {
+          clearSession('logout')
+          setCallbackStatus('error')
+          setAuthStep('idle')
+          navigate('/access-denied', { replace: true })
+        })
+        console.error(fetchError)
+      }
+    })()
   }, [clearSession, location.pathname, location.search, navigate, queryClient, touchSession])
 
   const handleLogout = useCallback(async () => {
-    const activeToken = getStoredAccessToken()
-
-    if (activeToken) {
-      try {
-        await fetch(
-          `${(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api').replace(/\/$/, '')}/auth/logout`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${activeToken}`,
-            },
-          },
-        )
-      } catch {
-        console.warn('Logout request failed, continuing with client-side cleanup.')
-      }
+    try {
+      await logoutFromApi()
+    } catch {
+      console.warn('Logout request failed, continuing with client-side cleanup.')
     }
 
     clearSession('logout')
@@ -238,13 +222,12 @@ export function useAuth() {
   }, [clearSession, navigate])
 
   const isDashboardAccessible = useMemo(
-    () => Boolean(authUser && accessToken && authStorage.isSessionValid()),
-    [accessToken, authUser],
+    () => Boolean(authUser && authStorage.isSessionValid()),
+    [authUser],
   )
 
   return {
     authUser,
-    accessToken,
     authStep,
     callbackStatus,
     sessionNotice,

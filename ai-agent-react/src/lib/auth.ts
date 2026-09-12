@@ -1,11 +1,4 @@
-import {
-  AUTH_USER_KEY,
-  ACCESS_TOKEN_KEY,
-  OAUTH_NONCE_KEY,
-  OAUTH_STATE_KEY,
-  REFRESH_TOKEN_KEY,
-  authStorage,
-} from '../utils/authStorage'
+import { AUTH_USER_KEY, authStorage } from '../utils/authStorage'
 import type { UserProfile } from '../types'
 
 type GoogleJwtPayload = {
@@ -69,31 +62,8 @@ export const buildMockUserProfile = (payload: GoogleJwtPayload): UserProfile => 
   }
 }
 
-export const validateGoogleCallback = (idToken: string, state: string) => {
-  const payload = decodeGoogleIdToken(idToken)
-  const expectedState = authStorage.read(OAUTH_STATE_KEY)
-  const expectedNonce = authStorage.read(OAUTH_NONCE_KEY)
-  const receivedNonce = payload.nonce
-
-  authStorage.remove(OAUTH_STATE_KEY)
-  authStorage.remove(OAUTH_NONCE_KEY)
-
-  return {
-    payload,
-    isValid: expectedState === state && expectedNonce === receivedNonce,
-  }
-}
-
 export const getStoredAuthUser = (): string | null => authStorage.read(AUTH_USER_KEY)
 
-export const getStoredAccessToken = (): string | null => authStorage.read(ACCESS_TOKEN_KEY)
-export const getStoredRefreshToken = (): string | null => authStorage.read(REFRESH_TOKEN_KEY)
-
-export const persistAuthSession = (user: UserProfile, token: string, refreshToken?: string) => {
+export const persistAuthSession = (user: UserProfile) => {
   authStorage.write(AUTH_USER_KEY, JSON.stringify(user))
-  authStorage.write(ACCESS_TOKEN_KEY, token)
-
-  if (refreshToken) {
-    authStorage.write(REFRESH_TOKEN_KEY, refreshToken)
-  }
 }

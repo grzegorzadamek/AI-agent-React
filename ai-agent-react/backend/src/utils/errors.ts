@@ -1,4 +1,5 @@
 import type { Response } from 'express'
+import { env } from '../config/env.js'
 
 export class AppError extends Error {
   constructor(
@@ -22,7 +23,12 @@ export const sendError = (res: Response, error: unknown) => {
     })
   }
 
-  const message = error instanceof Error ? error.message : 'Unexpected error'
+  const message =
+    env.NODE_ENV === 'production'
+      ? 'Unexpected server error'
+      : error instanceof Error
+        ? error.message
+        : 'Unexpected error'
   return res.status(500).json({
     success: false,
     error: {

@@ -1,15 +1,15 @@
 # Secure Auth + Dashboard API Schema
 
-This project currently uses a mock authentication flow. To connect a real backend, the frontend should call backend endpoints instead of the mock functions in [src/lib/mockApi.ts](src/lib/mockApi.ts).
+This project uses a React frontend and an Express backend with Google OAuth, cookie-backed sessions, Firebase persistence, and a local mock fallback for development helpers.
 
 ## Security model
 
-- Use OAuth 2.1 with Authorization Code + PKCE.
+- Use Google OAuth Authorization Code flow with server-side state validation.
 - Exchange the authorization code on the backend.
-- Return short-lived access tokens and refresh tokens.
-- Store tokens in HttpOnly, Secure, SameSite cookies in production.
+- Set short-lived access and refresh tokens in HttpOnly, SameSite cookies.
 - Validate access tokens on every protected request.
 - Rotate refresh tokens and revoke them on logout.
+- Apply security headers, request-size limits, and endpoint-specific rate limits.
 
 ## Endpoints
 
@@ -39,22 +39,12 @@ curl -i "http://localhost:3000/api/auth/google/callback?code=test-code&state=tes
 
 Success response:
 
-```json
-{
-  "success": true,
-  "data": {
-    "user": {
-      "id": "google-user-id",
-      "name": "Jan Kowalski",
-      "email": "jan@example.com",
-      "role": "Product Designer",
-      "plan": "Pro",
-      "avatar": "JK"
-    },
-    "expiresIn": 900
-  }
-}
+```http
+302 Found
+Location: http://localhost:5173/auth/callback
 ```
+
+The backend sets HttpOnly session cookies before redirecting. The frontend then calls `GET /api/me` to hydrate the session.
 
 ### 3) Refresh access token
 
@@ -66,8 +56,7 @@ Example:
 
 ```bash
 curl -i -X POST http://localhost:3000/api/auth/refresh \
-  -H "Content-Type: application/json" \
-  -d '{"refreshToken":"refresh-token-here"}'
+  --cookie "ai_refresh_token=refresh-token-here"
 ```
 
 ### 4) Logout
@@ -80,7 +69,7 @@ Example:
 
 ```bash
 curl -i -X POST http://localhost:3000/api/auth/logout \
-  -H "Authorization: Bearer access-token-here"
+  --cookie "ai_access_token=access-token-here; ai_refresh_token=refresh-token-here"
 ```
 
 ### 5) Get current user
@@ -106,8 +95,24 @@ Example:
 
 ```bash
 curl -i http://localhost:3000/api/dashboard \
-  -H "Authorization: Bearer access-token-here"
+  --cookie "ai_access_token=access-token-here"
 ```
+
+### 7) Get the public dashboard message
+
+```http
+GET /api/public/message
+```
+
+This endpoint is intentionally public because the login screen displays the latest submitted message. Do not send private or sensitive information through this endpoint.
+
+### 8) Submit a dashboard message
+
+```http
+POST /api/dashboard/message
+```
+
+The request requires the authenticated access cookie and accepts a trimmed message between 1 and 500 characters.
 
 ## OpenAPI / Swagger schema
 
@@ -147,9 +152,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties:
-                refreshToken:
-                  type: string
+              description: Refresh token is read from the HttpOnly cookie.
       responses:
         '200':
           description: New access token issued
@@ -163,7 +166,7 @@ paths:
     get:
       summary: Get current authenticated user
       security:
-        - bearerAuth: []
+        - cookieAuth: []
       responses:
         '200':
           description: Current user profile
@@ -171,7 +174,7 @@ paths:
     get:
       summary: Get dashboard stats
       security:
-        - bearerAuth: []
+        - cookieAuth: []
       responses:
         '200':
           description: Dashboard data
@@ -179,7 +182,7 @@ paths:
     post:
       summary: Submit a message from the dashboard
       security:
-        - bearerAuth: []
+        - cookieAuth: []
       requestBody:
         required: true
         content:
@@ -192,12 +195,18 @@ paths:
       responses:
         '200':
           description: Message accepted
+  /api/public/message:
+    get:
+      summary: Get the latest public dashboard message
+      responses:
+        '200':
+          description: Public message returned
 components:
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: ai_access_token
 ```
 
 ## Local development setup
@@ -207,8 +216,6 @@ components:
 Create a frontend environment file in the project root:
 
 ```env
-VITE_GOOGLE_CLIENT_ID=your-google-client-id
-VITE_GOOGLE_REDIRECT_URI=http://localhost:5173/auth/callback
 VITE_API_BASE_URL=http://localhost:3000/api
 ```
 
@@ -227,6 +234,7 @@ JWT_ACCESS_SECRET=replace-me
 JWT_REFRESH_SECRET=replace-me
 FIREBASE_PROJECT_ID=your-firebase-project-id
 GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
+ALLOWED_EMAILS=allowed@example.com
 ```
 
 ### 3) Firebase setup
@@ -269,19 +277,17 @@ http://localhost:5173
 1. Open `http://localhost:5173`
 2. Click `Kontynuuj z Google`
 3. Confirm the Google login
-4. The backend redirects back to the frontend callback route and stores the issued tokens in browser session storage
-5. The dashboard requests data from the backend protected endpoint
+4. The backend sets HttpOnly cookies and redirects back to the frontend callback route
+5. The frontend calls `/api/me`, then requests data from the protected dashboard endpoint
 
 ## Next steps before production
 
-1. Replace the mock API with real HTTP calls.
-2. Use HttpOnly cookies instead of browser storage for tokens.
-3. Implement Authorization Code + PKCE.
-4. Validate tokens on the backend for every protected route.
-5. Add refresh-token rotation and logout revocation.
-6. Add CSRF protection for cookie-based auth.
-7. Add rate limiting, monitoring, and logging.
-8. Use HTTPS in production.
+1. Add Authorization Code + PKCE if the OAuth client is deployed across separate sites.
+2. Validate tokens on the backend for every protected route.
+3. Refresh tokens are rotated and revoked on logout. In production, Firebase must be configured; the backend does not fall back to in-memory persistence.
+4. Add CSRF protection if cookie settings change to `SameSite=None`.
+5. Add monitoring and structured logging.
+6. Use HTTPS in production.
 
 ## Copilot instructions for creating the Node.js backend
 
@@ -295,7 +301,7 @@ Create a Node.js backend that matches the current frontend authentication and da
 
 - Runtime: Node.js + TypeScript
 - Framework: Express.js or Fastify
-- Auth: Google OAuth 2.1, JWT access tokens, refresh tokens
+- Auth: Google OAuth Authorization Code flow, JWT access tokens, HttpOnly cookies, refresh-token rotation
 - Database: PostgreSQL or MongoDB
 - Validation: Zod or Joi
 - Password hashing: not needed for OAuth-only flow
@@ -312,7 +318,7 @@ Create a Node.js backend that matches the current frontend authentication and da
    - GET /api/dashboard
    - POST /api/dashboard/message
 
-2. Use Google OAuth flow based on Authorization Code + PKCE.
+2. Use Google OAuth flow based on Authorization Code and server-side state validation.
 3. On successful Google login:
    - verify the returned user information,
    - create or update the user record,

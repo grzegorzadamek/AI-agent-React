@@ -9,19 +9,10 @@ type DashboardPageProps = {
   stats: DashboardStats | undefined
   isLoading: boolean
   onLogout: () => void
-  accessToken?: string | null
 }
 
-export function DashboardPage({
-  user,
-  stats,
-  isLoading,
-  onLogout,
-  accessToken,
-}: DashboardPageProps) {
-  const { message, setMessage, isSubmitting, submitStatus, handleSubmit } = useDashboardMessage({
-    accessToken,
-  })
+export function DashboardPage({ user, stats, isLoading, onLogout }: DashboardPageProps) {
+  const { message, setMessage, isSubmitting, submitStatus, handleSubmit } = useDashboardMessage()
 
   const safeStats: DashboardStats = {
     projects: stats?.projects ?? 0,

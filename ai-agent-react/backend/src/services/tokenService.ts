@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import jwt from 'jsonwebtoken'
 import { env } from '../config/env.js'
 import type { AuthTokens, SessionPayload } from '../types.js'
@@ -13,6 +14,7 @@ export const signTokens = (payload: SessionPayload): AuthTokens => ({
     {
       sub: payload.sub,
       email: payload.email,
+      jti: randomUUID(),
     },
     env.JWT_REFRESH_SECRET,
     {
@@ -25,4 +27,10 @@ export const verifyAccessToken = (token: string) =>
   jwt.verify(token, env.JWT_ACCESS_SECRET) as SessionPayload
 
 export const verifyRefreshToken = (token: string) =>
-  jwt.verify(token, env.JWT_REFRESH_SECRET) as { sub: string; email: string }
+  jwt.verify(token, env.JWT_REFRESH_SECRET) as {
+    sub: string
+    email: string
+    jti: string
+    iat?: number
+    exp?: number
+  }

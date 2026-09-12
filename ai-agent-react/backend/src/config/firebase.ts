@@ -41,6 +41,10 @@ if (!admin.apps.length) {
   }
 }
 
+if (!firebaseEnabled && env.NODE_ENV === 'production') {
+  throw new Error('Firebase is required in production but could not be initialized')
+}
+
 export const db = firebaseEnabled ? admin.firestore() : null
 export const auth = firebaseEnabled ? admin.auth() : null
 export const isFirebaseEnabled = () => firebaseEnabled

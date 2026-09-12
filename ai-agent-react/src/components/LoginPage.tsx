@@ -15,13 +15,10 @@ const authStepLabels: Record<LoginPageProps['authStep'], string> = {
   success: 'Logowanie zakończone. Przekierowuję do dashboardu…',
 }
 
-const isMissingBackendConfig = !import.meta.env.VITE_API_BASE_URL
-
 export function LoginPage({ onLogin, isLoading, authStep, sessionNotice }: LoginPageProps) {
   const publicMessageQuery = useQuery({
     queryKey: ['public-dashboard-message'],
     queryFn: fetchPublicDashboardMessage,
-    enabled: !isMissingBackendConfig,
     staleTime: 30_000,
     retry: false,
   })
@@ -89,12 +86,6 @@ export function LoginPage({ onLogin, isLoading, authStep, sessionNotice }: Login
                   {sessionNotice}
                 </p>
               ) : null}
-              {isMissingBackendConfig ? (
-                <p className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-amber-300">
-                  Brakuje ustawienia VITE_API_BASE_URL. Dodaj adres backendu, np.
-                  http://localhost:3000/api, aby OAuth zaczął działać.
-                </p>
-              ) : null}
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800">
                 <div
                   className={`h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-400 transition-all duration-500 ${
@@ -109,11 +100,14 @@ export function LoginPage({ onLogin, isLoading, authStep, sessionNotice }: Login
                 />
               </div>
             </div>
+            {publicMessageQuery.isPending ? (
+              <p className="mt-5 text-sm text-slate-500">Pobieram ostatnią wiadomość...</p>
+            ) : null}
+            {publicMessageQuery.isError ? (
+              <p className="mt-5 text-sm text-slate-500">Wiadomość jest chwilowo niedostępna.</p>
+            ) : null}
             {publicMessageQuery.data ? (
               <div className="mt-5 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">
-                  Ostatnia wiadomość
-                </p>
                 <p className="mt-2 text-sm leading-6 text-cyan-50">{publicMessageQuery.data}</p>
               </div>
             ) : null}

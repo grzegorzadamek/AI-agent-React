@@ -6,7 +6,7 @@ import * as apiClient from '../lib/apiClient'
 
 type HookResult = ReturnType<typeof useDashboardMessage>
 
-function renderDashboardMessageHook(accessToken: string | null) {
+function renderDashboardMessageHook() {
   const resultRef = { current: null as HookResult | null }
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -15,7 +15,7 @@ function renderDashboardMessageHook(accessToken: string | null) {
   })
 
   function TestComponent() {
-    resultRef.current = useDashboardMessage({ accessToken })
+    resultRef.current = useDashboardMessage()
     return null
   }
 
@@ -32,18 +32,24 @@ describe('useDashboardMessage', () => {
     vi.clearAllMocks()
   })
 
-  it('returns error when access token is missing', async () => {
-    const result = renderDashboardMessageHook(null)
+  it('returns API errors to the user', async () => {
+    vi.spyOn(apiClient, 'submitDashboardMessageWithFallback').mockRejectedValue(
+      new Error('Sesja wygasła.'),
+    )
+    const result = renderDashboardMessageHook()
+    await act(async () => {
+      result.current?.setMessage('Hello')
+    })
 
     await act(async () => {
       await result.current?.handleSubmit()
     })
 
-    expect(result.current?.submitStatus).toEqual({ type: 'error', text: 'Brak tokena sesji.' })
+    expect(result.current?.submitStatus).toEqual({ type: 'error', text: 'Sesja wygasła.' })
   })
 
   it('returns error when message is empty', async () => {
-    const result = renderDashboardMessageHook('token')
+    const result = renderDashboardMessageHook()
 
     await act(async () => {
       await result.current?.handleSubmit()
@@ -59,7 +65,7 @@ describe('useDashboardMessage', () => {
     const mockResponse = { ok: true, message: 'Mock message sent' }
     vi.spyOn(apiClient, 'submitDashboardMessageWithFallback').mockResolvedValue(mockResponse)
 
-    const result = renderDashboardMessageHook('token')
+    const result = renderDashboardMessageHook()
 
     await act(async () => {
       result.current?.setMessage('Hello from test')
@@ -69,10 +75,7 @@ describe('useDashboardMessage', () => {
       await result.current?.handleSubmit()
     })
 
-    expect(apiClient.submitDashboardMessageWithFallback).toHaveBeenCalledWith(
-      'token',
-      'Hello from test',
-    )
+    expect(apiClient.submitDashboardMessageWithFallback).toHaveBeenCalledWith('Hello from test')
     expect(result.current?.submitStatus).toEqual({ type: 'success', text: mockResponse.message })
     expect(result.current?.message).toBe('')
   })

@@ -32,6 +32,14 @@ vi.mock('@tanstack/react-query', async () => {
 })
 
 vi.mock('../lib/apiClient', () => ({
+  fetchCurrentUser: vi.fn(async () => ({
+    id: 'user-1',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'Product Designer',
+    plan: 'Pro',
+    avatar: 'TU',
+  })),
   fetchDashboardStatsWithFallback: vi.fn(async () => ({
     projects: 1,
     tasks: 2,

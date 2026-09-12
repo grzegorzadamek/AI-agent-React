@@ -9,7 +9,6 @@ import { useAuth } from './hooks/useAuth'
 function App() {
   const {
     authUser,
-    accessToken,
     authStep,
     callbackStatus,
     sessionNotice,
@@ -51,7 +50,6 @@ function App() {
               stats={dashboardQuery.data}
               isLoading={dashboardQuery.isLoading}
               onLogout={handleLogout}
-              accessToken={accessToken}
             />
           </ProtectedRoute>
         }
