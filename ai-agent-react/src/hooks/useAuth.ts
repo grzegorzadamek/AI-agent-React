@@ -114,7 +114,7 @@ export function useAuth() {
   })
 
   const dashboardQuery = useQuery({
-    queryKey: ['dashboard-stats', authUser?.email, accessToken],
+    queryKey: ['dashboard-stats', authUser?.email],
     queryFn: async () => {
       if (!authUser || !accessToken) {
         throw new Error('Missing auth context')

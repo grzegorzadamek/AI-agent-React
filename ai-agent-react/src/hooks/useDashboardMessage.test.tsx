@@ -1,4 +1,5 @@
 import { act, render } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { vi, describe, expect, it, beforeEach } from 'vitest'
 import { useDashboardMessage } from './useDashboardMessage'
 import * as apiClient from '../lib/apiClient'
@@ -7,13 +8,22 @@ type HookResult = ReturnType<typeof useDashboardMessage>
 
 function renderDashboardMessageHook(accessToken: string | null, email: string) {
   const resultRef = { current: null as HookResult | null }
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+    },
+  })
 
   function TestComponent() {
     resultRef.current = useDashboardMessage({ accessToken, email })
     return null
   }
 
-  render(<TestComponent />)
+  render(
+    <QueryClientProvider client={queryClient}>
+      <TestComponent />
+    </QueryClientProvider>,
+  )
   return resultRef
 }
 
