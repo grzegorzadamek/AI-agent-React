@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -30,6 +30,8 @@ export function useAuth() {
   const [sessionNotice, setSessionNotice] = useState<string | null>(null)
   const [accessDeniedEmail, setAccessDeniedEmail] = useState<string | null>(null)
   const [isSessionReady, setIsSessionReady] = useState(false)
+  const skipHydrationRef = useRef(false)
+  const hydrationStartedRef = useRef(false)
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const location = useLocation()
@@ -51,7 +53,15 @@ export function useAuth() {
   }, [])
 
   useEffect(() => {
-    if (location.pathname === '/auth/callback') return undefined
+    if (location.pathname === '/auth/callback' || location.pathname === '/access-denied') {
+      queueMicrotask(() => setIsSessionReady(true))
+      return undefined
+    }
+    if (skipHydrationRef.current || hydrationStartedRef.current) {
+      queueMicrotask(() => setIsSessionReady(true))
+      return undefined
+    }
+    hydrationStartedRef.current = true
 
     let cancelled = false
     void fetchCurrentUser()
@@ -218,6 +228,7 @@ export function useAuth() {
   }, [clearSession, location.pathname, location.search, navigate, queryClient, touchSession])
 
   const handleLogout = useCallback(async () => {
+    skipHydrationRef.current = true
     try {
       await logoutFromApi()
     } catch {

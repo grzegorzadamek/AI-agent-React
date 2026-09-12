@@ -37,6 +37,10 @@ const requestInit = (): RequestInit => ({
   headers: buildHeaders(),
 })
 
+type AuthRequestOptions = {
+  refreshOnUnauthorized?: boolean
+}
+
 let refreshPromise: Promise<void> | null = null
 
 const parseJson = async <T>(response: Response): Promise<T> => {
@@ -72,7 +76,9 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
 }
 
 export const fetchCurrentUser = async () => {
-  const response = await requestWithAuth(`${apiBaseUrl}/me`, requestInit())
+  const response = await requestWithAuth(`${apiBaseUrl}/me`, requestInit(), {
+    refreshOnUnauthorized: false,
+  })
   if (!response.ok) {
     throw new ApiError(`API error: ${response.status}`, response.status)
   }
@@ -131,9 +137,13 @@ const refreshOnce = async () => {
   return refreshPromise
 }
 
-const requestWithAuth = async (url: string, init: RequestInit): Promise<Response> => {
+const requestWithAuth = async (
+  url: string,
+  init: RequestInit,
+  options: AuthRequestOptions = {},
+): Promise<Response> => {
   const response = await fetch(url, init)
-  if (response.status !== 401) {
+  if (response.status !== 401 || options.refreshOnUnauthorized === false) {
     return response
   }
 
