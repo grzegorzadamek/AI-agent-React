@@ -56,16 +56,18 @@ export function useAuth() {
   useEffect(() => {
     if (!authStorage.isSessionValid()) {
       if (authUser || accessToken) {
-        clearSession('expired')
-        if (location.pathname === '/dashboard') {
-          navigate('/access-denied', { replace: true })
-        }
+        queueMicrotask(() => {
+          clearSession('expired')
+          if (location.pathname === '/dashboard') {
+            navigate('/access-denied', { replace: true })
+          }
+        })
       }
       return
     }
 
     if (authUser && accessToken) {
-      setAccessDeniedEmail(null)
+      queueMicrotask(() => setAccessDeniedEmail(null))
     }
   }, [accessToken, authUser, clearSession, location.pathname, navigate])
 
@@ -153,7 +155,7 @@ export function useAuth() {
     if (location.pathname === '/access-denied') {
       const email = new URLSearchParams(location.search).get('email')
       if (email) {
-        setAccessDeniedEmail(email)
+        queueMicrotask(() => setAccessDeniedEmail(email))
       }
       return undefined
     }
@@ -169,8 +171,10 @@ export function useAuth() {
     const encodedUser = params.get('user')
 
     if (error) {
-      setCallbackStatus('error')
-      setAuthStep('idle')
+      queueMicrotask(() => {
+        setCallbackStatus('error')
+        setAuthStep('idle')
+      })
       return undefined
     }
 
@@ -178,25 +182,31 @@ export function useAuth() {
       return undefined
     }
 
-    setAuthStep('authenticating')
-    setCallbackStatus('processing')
+    queueMicrotask(() => {
+      setAuthStep('authenticating')
+      setCallbackStatus('processing')
+    })
 
     try {
       const authenticatedUser = JSON.parse(decodeURIComponent(encodedUser)) as UserProfile
 
-      setAuthUser(authenticatedUser)
-      setAccessToken(accessToken)
-      setAuthStep('success')
-      setAccessDeniedEmail(null)
+      queueMicrotask(() => {
+        setAuthUser(authenticatedUser)
+        setAccessToken(accessToken)
+        setAuthStep('success')
+        setAccessDeniedEmail(null)
+      })
       persistAuthSession(authenticatedUser, accessToken, refreshToken)
       touchSession()
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
       navigate('/dashboard', { replace: true })
     } catch (fetchError) {
-      clearSession('logout')
-      setCallbackStatus('error')
-      setAuthStep('idle')
-      navigate('/access-denied', { replace: true })
+      queueMicrotask(() => {
+        clearSession('logout')
+        setCallbackStatus('error')
+        setAuthStep('idle')
+        navigate('/access-denied', { replace: true })
+      })
       console.error(fetchError)
     }
 

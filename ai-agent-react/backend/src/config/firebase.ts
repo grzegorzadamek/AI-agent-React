@@ -24,7 +24,7 @@ if (!admin.apps.length) {
   } else {
     try {
       appOptions.credential = admin.credential.applicationDefault()
-    } catch (error) {
+    } catch {
       console.warn(
         '[firebase] Firebase Admin default credentials are not available. Falling back to local in-memory user storage.',
       )
@@ -34,7 +34,7 @@ if (!admin.apps.length) {
   try {
     admin.initializeApp(appOptions)
     firebaseEnabled = true
-  } catch (error) {
+  } catch {
     console.warn(
       '[firebase] Firebase Admin SDK initialization failed. Falling back to local in-memory user storage.',
     )

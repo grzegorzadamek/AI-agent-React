@@ -37,6 +37,20 @@ const buildUserProfile = (email: string, name: string) => ({
   avatar: name.charAt(0).toUpperCase(),
 })
 
+const getCookie = (cookieHeader: string | undefined, name: string) => {
+  const cookie = cookieHeader
+    ?.split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`))
+
+  return cookie ? decodeURIComponent(cookie.slice(name.length + 1)) : null
+}
+
+const oauthStateCookie = (state: string, maxAge: number) =>
+  `oauth_state=${encodeURIComponent(state)}; Max-Age=${maxAge}; Path=/api/auth; HttpOnly; SameSite=Lax${
+    env.NODE_ENV === 'production' ? '; Secure' : ''
+  }`
+
 export const googleLogin = (req: Request, res: Response) => {
   const state = randomBytes(16).toString('hex')
   const authUrl = oauthClient.generateAuthUrl({
@@ -47,13 +61,20 @@ export const googleLogin = (req: Request, res: Response) => {
     state,
   })
 
+  res.setHeader('Set-Cookie', oauthStateCookie(state, 600))
   return res.redirect(authUrl)
 }
 
 export const googleCallback = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const code = z.string().min(1).parse(req.query.code)
-    const state = z.string().optional().parse(req.query.state) ?? ''
+    const state = z.string().min(1).parse(req.query.state)
+    const expectedState = getCookie(req.headers.cookie, 'oauth_state')
+    if (!expectedState || expectedState !== state) {
+      throw new AppError(400, 'INVALID_OAUTH_STATE', 'OAuth state validation failed')
+    }
+
+    res.setHeader('Set-Cookie', oauthStateCookie('', 0))
     const tokenResponse = await oauthClient.getToken(code)
     const idToken = tokenResponse.tokens.id_token
     if (!idToken) {

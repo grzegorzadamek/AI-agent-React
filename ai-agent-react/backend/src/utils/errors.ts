@@ -1,3 +1,5 @@
+import type { Response } from 'express'
+
 export class AppError extends Error {
   constructor(
     public statusCode: number,
@@ -9,7 +11,7 @@ export class AppError extends Error {
   }
 }
 
-export const sendError = (res: any, error: unknown) => {
+export const sendError = (res: Response, error: unknown) => {
   if (error instanceof AppError) {
     return res.status(error.statusCode).json({
       success: false,

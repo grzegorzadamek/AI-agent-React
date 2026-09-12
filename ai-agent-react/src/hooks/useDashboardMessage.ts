@@ -5,10 +5,9 @@ import type { SubmitStatus } from '../types'
 
 type UseDashboardMessageArgs = {
   accessToken?: string | null
-  email: string
 }
 
-export function useDashboardMessage({ accessToken, email }: UseDashboardMessageArgs) {
+export function useDashboardMessage({ accessToken }: UseDashboardMessageArgs) {
   const queryClient = useQueryClient()
   const [message, setMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -46,7 +45,7 @@ export function useDashboardMessage({ accessToken, email }: UseDashboardMessageA
     } finally {
       setIsSubmitting(false)
     }
-  }, [accessToken, email, message])
+  }, [accessToken, message, queryClient])
 
   return {
     message,

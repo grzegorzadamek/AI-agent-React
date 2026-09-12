@@ -6,7 +6,7 @@ import * as apiClient from '../lib/apiClient'
 
 type HookResult = ReturnType<typeof useDashboardMessage>
 
-function renderDashboardMessageHook(accessToken: string | null, email: string) {
+function renderDashboardMessageHook(accessToken: string | null) {
   const resultRef = { current: null as HookResult | null }
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -15,7 +15,7 @@ function renderDashboardMessageHook(accessToken: string | null, email: string) {
   })
 
   function TestComponent() {
-    resultRef.current = useDashboardMessage({ accessToken, email })
+    resultRef.current = useDashboardMessage({ accessToken })
     return null
   }
 
@@ -33,7 +33,7 @@ describe('useDashboardMessage', () => {
   })
 
   it('returns error when access token is missing', async () => {
-    const result = renderDashboardMessageHook(null, 'test@example.com')
+    const result = renderDashboardMessageHook(null)
 
     await act(async () => {
       await result.current?.handleSubmit()
@@ -43,7 +43,7 @@ describe('useDashboardMessage', () => {
   })
 
   it('returns error when message is empty', async () => {
-    const result = renderDashboardMessageHook('token', 'test@example.com')
+    const result = renderDashboardMessageHook('token')
 
     await act(async () => {
       await result.current?.handleSubmit()
@@ -59,7 +59,7 @@ describe('useDashboardMessage', () => {
     const mockResponse = { ok: true, message: 'Mock message sent' }
     vi.spyOn(apiClient, 'submitDashboardMessageWithFallback').mockResolvedValue(mockResponse)
 
-    const result = renderDashboardMessageHook('token', 'test@example.com')
+    const result = renderDashboardMessageHook('token')
 
     await act(async () => {
       result.current?.setMessage('Hello from test')

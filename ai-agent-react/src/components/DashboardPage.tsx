@@ -21,7 +21,6 @@ export function DashboardPage({
 }: DashboardPageProps) {
   const { message, setMessage, isSubmitting, submitStatus, handleSubmit } = useDashboardMessage({
     accessToken,
-    email: user.email,
   })
 
   const safeStats: DashboardStats = {

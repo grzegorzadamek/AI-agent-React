@@ -14,9 +14,11 @@ vi.mock('react-router-dom', async () => {
 
 vi.mock('@tanstack/react-query', async () => {
   const actual = await vi.importActual('@tanstack/react-query')
+  type MockMutationOptions = { mutationFn?: () => Promise<unknown> }
+
   return {
     ...actual,
-    useMutation: (options: any) => ({
+    useMutation: (options: MockMutationOptions) => ({
       mutate: vi.fn(async () => {
         if (options?.mutationFn) {
           await options.mutationFn()
