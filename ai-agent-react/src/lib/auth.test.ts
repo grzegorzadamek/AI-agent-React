@@ -21,7 +21,12 @@ describe('auth helpers', () => {
   })
 
   it('decodes a JWT id token payload', () => {
-    const wrapped = 'eyJhbGciOiJIUzI1NiJ9.' + Buffer.from(JSON.stringify({ email: 'test@example.com', nonce: 'abc123' })).toString('base64url') + '.signature'
+    const wrapped =
+      'eyJhbGciOiJIUzI1NiJ9.' +
+      Buffer.from(JSON.stringify({ email: 'test@example.com', nonce: 'abc123' })).toString(
+        'base64url',
+      ) +
+      '.signature'
     const payload = decodeGoogleIdToken(wrapped)
 
     expect(payload).toEqual({ email: 'test@example.com', nonce: 'abc123' })

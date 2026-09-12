@@ -2,7 +2,10 @@ import type { DashboardStats } from '../types'
 import { getStoredAuthUser } from './auth'
 import { submitDashboardMessageFallback } from './mockClient'
 
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api').replace(/\/$/, '')
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api').replace(
+  /\/$/,
+  '',
+)
 const isRealBackendEnabled = Boolean(apiBaseUrl)
 
 type ApiEnvelope<T> = {
@@ -62,6 +65,24 @@ export const fetchDashboardStats = async (accessToken: string): Promise<Dashboar
   return parseApiPayload<DashboardStats>(response)
 }
 
+export const fetchPublicDashboardMessage = async (): Promise<string> => {
+  if (!isRealBackendEnabled) {
+    return ''
+  }
+
+  const response = await fetch(`${apiBaseUrl}/public/message`, {
+    method: 'GET',
+    headers: buildHeaders(),
+  })
+
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`)
+  }
+
+  const payload = await parseApiPayload<{ message: string }>(response)
+  return payload.message
+}
+
 export const submitDashboardMessageToApi = async (accessToken: string, message: string) => {
   if (!isRealBackendEnabled) {
     throw new Error('Real backend not configured')
@@ -109,7 +130,9 @@ export const logoutFromApi = async (accessToken: string) => {
   })
 }
 
-export const fetchDashboardStatsWithFallback = async (accessToken: string): Promise<DashboardStats> => {
+export const fetchDashboardStatsWithFallback = async (
+  accessToken: string,
+): Promise<DashboardStats> => {
   return fetchDashboardStats(accessToken)
 }
 

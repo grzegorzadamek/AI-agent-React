@@ -49,7 +49,10 @@ describe('useDashboardMessage', () => {
       await result.current?.handleSubmit()
     })
 
-    expect(result.current?.submitStatus).toEqual({ type: 'error', text: 'Wpisz wiadomość przed wysłaniem.' })
+    expect(result.current?.submitStatus).toEqual({
+      type: 'error',
+      text: 'Wpisz wiadomość przed wysłaniem.',
+    })
   })
 
   it('submits a message and clears the input on success', async () => {
@@ -66,7 +69,10 @@ describe('useDashboardMessage', () => {
       await result.current?.handleSubmit()
     })
 
-    expect(apiClient.submitDashboardMessageWithFallback).toHaveBeenCalledWith('token', 'Hello from test')
+    expect(apiClient.submitDashboardMessageWithFallback).toHaveBeenCalledWith(
+      'token',
+      'Hello from test',
+    )
     expect(result.current?.submitStatus).toEqual({ type: 'success', text: mockResponse.message })
     expect(result.current?.message).toBe('')
   })

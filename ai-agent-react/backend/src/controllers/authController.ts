@@ -4,7 +4,14 @@ import { OAuth2Client } from 'google-auth-library'
 import { z } from 'zod'
 import { env } from '../config/env.js'
 import { signTokens, verifyRefreshToken } from '../services/tokenService.js'
-import { getUserByEmail, isEmailAllowed, upsertUser, saveDashboardMessageForUser, getDashboardStatsForUser } from '../services/userService.js'
+import {
+  getUserByEmail,
+  isEmailAllowed,
+  upsertUser,
+  saveDashboardMessageForUser,
+  getDashboardStatsForUser,
+  getLatestDashboardMessage,
+} from '../services/userService.js'
 import { AppError } from '../utils/errors.js'
 
 const oauthClient = new OAuth2Client({
@@ -189,4 +196,17 @@ export const dashboardMessage = async (req: Request, res: Response) => {
       progress: saved.completion,
     },
   })
+}
+
+export const publicDashboardMessage = async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const message = await getLatestDashboardMessage()
+
+    return res.json({
+      success: true,
+      data: { message },
+    })
+  } catch (error) {
+    return next(error)
+  }
 }

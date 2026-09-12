@@ -1,3 +1,6 @@
+import { useQuery } from '@tanstack/react-query'
+import { fetchPublicDashboardMessage } from '../lib/apiClient'
+
 type LoginPageProps = {
   onLogin: () => void
   isLoading: boolean
@@ -15,6 +18,14 @@ const authStepLabels: Record<LoginPageProps['authStep'], string> = {
 const isMissingBackendConfig = !import.meta.env.VITE_API_BASE_URL
 
 export function LoginPage({ onLogin, isLoading, authStep, sessionNotice }: LoginPageProps) {
+  const publicMessageQuery = useQuery({
+    queryKey: ['public-dashboard-message'],
+    queryFn: fetchPublicDashboardMessage,
+    enabled: !isMissingBackendConfig,
+    staleTime: 30_000,
+    retry: false,
+  })
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(139,92,246,0.22),_transparent_30%),linear-gradient(135deg,_#020617_0%,_#111827_100%)] px-4 py-10 text-white">
       <section className="w-full max-w-6xl overflow-hidden rounded-[32px] border border-white/10 bg-slate-900/70 shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
@@ -28,14 +39,16 @@ export function LoginPage({ onLogin, isLoading, authStep, sessionNotice }: Login
                 Zaloguj się i zacznij pracę w swoim panelu.
               </h1>
               <p className="mt-4 max-w-xl text-base text-white/80 sm:text-lg">
-                Współpracuj z zespołem, monitoruj postępy i zarządzaj zadaniami bezpośrednio po wejściu do aplikacji.
+                Współpracuj z zespołem, monitoruj postępy i zarządzaj zadaniami bezpośrednio po
+                wejściu do aplikacji.
               </p>
             </div>
 
             <div className="mt-8 rounded-3xl border border-white/20 bg-slate-950/20 p-5 text-sm text-white/85">
               <p className="font-semibold">Bezpieczne logowanie</p>
               <p className="mt-2 leading-6 text-white/80">
-                Obecnie flow jest podpięte pod OAuth w stylu Google. Po powrocie z Google aplikacja finalizuje sesję i przekierowuje do dashboardu.
+                Obecnie flow jest podpięte pod OAuth w stylu Google. Po powrocie z Google aplikacja
+                finalizuje sesję i przekierowuje do dashboardu.
               </p>
             </div>
           </div>
@@ -78,7 +91,8 @@ export function LoginPage({ onLogin, isLoading, authStep, sessionNotice }: Login
               ) : null}
               {isMissingBackendConfig ? (
                 <p className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-amber-300">
-                  Brakuje ustawienia VITE_API_BASE_URL. Dodaj adres backendu, np. http://localhost:3000/api, aby OAuth zaczął działać.
+                  Brakuje ustawienia VITE_API_BASE_URL. Dodaj adres backendu, np.
+                  http://localhost:3000/api, aby OAuth zaczął działać.
                 </p>
               ) : null}
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800">
@@ -95,6 +109,14 @@ export function LoginPage({ onLogin, isLoading, authStep, sessionNotice }: Login
                 />
               </div>
             </div>
+            {publicMessageQuery.data ? (
+              <div className="mt-5 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">
+                  Ostatnia wiadomość
+                </p>
+                <p className="mt-2 text-sm leading-6 text-cyan-50">{publicMessageQuery.data}</p>
+              </div>
+            ) : null}
           </div>
         </div>
       </section>

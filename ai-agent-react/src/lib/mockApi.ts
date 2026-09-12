@@ -13,7 +13,8 @@ const buildMockUser = (email: string, name: string, avatar: string): UserProfile
   avatar,
 })
 
-const createAccessToken = (email: string) => `mock-token-${btoa(email)}-${Math.random().toString(36).slice(2)}`
+const createAccessToken = (email: string) =>
+  `mock-token-${btoa(email)}-${Math.random().toString(36).slice(2)}`
 
 const extractBearerToken = (headers?: HeadersInit): string | null => {
   if (!headers) {
@@ -30,7 +31,10 @@ const extractBearerToken = (headers?: HeadersInit): string | null => {
   return authorization.slice(7).trim()
 }
 
-export async function refreshAccessToken(input: { email: string; accessToken: string }): Promise<string> {
+export async function refreshAccessToken(input: {
+  email: string
+  accessToken: string
+}): Promise<string> {
   const normalizedEmail = input.email.trim().toLowerCase()
 
   if (!normalizedEmail || !input.accessToken || !input.accessToken.startsWith('mock-token-')) {
@@ -42,7 +46,10 @@ export async function refreshAccessToken(input: { email: string; accessToken: st
   return createAccessToken(normalizedEmail)
 }
 
-export async function authenticateUser(input: { email: string; idToken: string }): Promise<AuthResult> {
+export async function authenticateUser(input: {
+  email: string
+  idToken: string
+}): Promise<AuthResult> {
   const normalizedEmail = input.email.trim().toLowerCase()
 
   if (!normalizedEmail || !input.idToken) {
@@ -60,7 +67,11 @@ export async function authenticateUser(input: { email: string; idToken: string }
     }
   }
 
-  const user = buildMockUser(normalizedEmail, normalizedEmail.split('@')[0], normalizedEmail[0].toUpperCase())
+  const user = buildMockUser(
+    normalizedEmail,
+    normalizedEmail.split('@')[0],
+    normalizedEmail[0].toUpperCase(),
+  )
   return {
     authorized: true,
     user,
@@ -68,7 +79,11 @@ export async function authenticateUser(input: { email: string; idToken: string }
   }
 }
 
-export async function fetchDashboardData(input: { accessToken: string; email: string; headers?: HeadersInit }): Promise<DashboardStats> {
+export async function fetchDashboardData(input: {
+  accessToken: string
+  email: string
+  headers?: HeadersInit
+}): Promise<DashboardStats> {
   const normalizedEmail = input.email.trim().toLowerCase()
   const bearerToken = extractBearerToken(input.headers) ?? input.accessToken
 
@@ -90,7 +105,11 @@ export async function fetchDashboardData(input: { accessToken: string; email: st
   }
 }
 
-export async function submitDashboardMessage(input: { message: string; email: string; accessToken: string }): Promise<{ ok: boolean; message: string }> {
+export async function submitDashboardMessage(input: {
+  message: string
+  email: string
+  accessToken: string
+}): Promise<{ ok: boolean; message: string }> {
   const normalizedEmail = input.email.trim().toLowerCase()
 
   if (!input.accessToken || !input.accessToken.startsWith('mock-token-')) {

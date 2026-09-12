@@ -12,7 +12,13 @@ type DashboardPageProps = {
   accessToken?: string | null
 }
 
-export function DashboardPage({ user, stats, isLoading, onLogout, accessToken }: DashboardPageProps) {
+export function DashboardPage({
+  user,
+  stats,
+  isLoading,
+  onLogout,
+  accessToken,
+}: DashboardPageProps) {
   const { message, setMessage, isSubmitting, submitStatus, handleSubmit } = useDashboardMessage({
     accessToken,
     email: user.email,
@@ -41,9 +47,12 @@ export function DashboardPage({ user, stats, isLoading, onLogout, accessToken }:
 
           <div className="rounded-[28px] border border-white/10 bg-gradient-to-br from-violet-600/90 to-cyan-500/90 p-6 shadow-[0_18px_70px_rgba(0,0,0,0.35)]">
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/80">Postęp</p>
-            <p className="mt-3 text-5xl font-semibold text-white">{isLoading ? '…' : `${safeStats.completion}%`}</p>
+            <p className="mt-3 text-5xl font-semibold text-white">
+              {isLoading ? '…' : `${safeStats.completion}%`}
+            </p>
             <p className="mt-3 text-sm leading-6 text-white/80">
-              Dane są pobierane przez TanStack Query i mogą być łatwo wymienione na prawdziwy backend.
+              Dane są pobierane przez TanStack Query i mogą być łatwo wymienione na prawdziwy
+              backend.
             </p>
           </div>
         </section>

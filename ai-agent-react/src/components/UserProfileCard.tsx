@@ -9,7 +9,9 @@ export function UserProfileCard({ user, onLogout }: UserProfileCardProps) {
   return (
     <header className="flex flex-col justify-between gap-4 rounded-[28px] border border-white/10 bg-slate-900/70 p-6 shadow-[0_18px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:flex-row sm:items-center">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-violet-400">Dashboard</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-violet-400">
+          Dashboard
+        </p>
         <h1 className="mt-2 text-3xl font-semibold">Witaj, {user.name}</h1>
         <p className="mt-2 text-sm text-slate-400">{user.email}</p>
       </div>

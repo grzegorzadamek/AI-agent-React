@@ -42,7 +42,9 @@ function App() {
         element={
           <ProtectedRoute
             condition={isDashboardAccessible}
-            fallback={<AccessDeniedPage email={authUser?.email ?? accessDeniedEmail ?? undefined} />}
+            fallback={
+              <AccessDeniedPage email={authUser?.email ?? accessDeniedEmail ?? undefined} />
+            }
           >
             <DashboardPage
               user={authUser!}

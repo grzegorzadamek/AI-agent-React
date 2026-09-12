@@ -8,12 +8,20 @@ type MessageSectionProps = {
   status: SubmitStatus
 }
 
-export function MessageSection({ message, onChange, onSubmit, isSubmitting, status }: MessageSectionProps) {
+export function MessageSection({
+  message,
+  onChange,
+  onSubmit,
+  isSubmitting,
+  status,
+}: MessageSectionProps) {
   return (
     <section className="rounded-[28px] border border-white/10 bg-slate-900/70 p-6 shadow-[0_18px_70px_rgba(0,0,0,0.35)]">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-violet-400">Wiadomość do backendu</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-violet-400">
+            Wiadomość do backendu
+          </p>
           <h2 className="mt-2 text-xl font-semibold text-white">Napisz coś i wyślij POSTem</h2>
         </div>
         <button

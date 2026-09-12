@@ -2,10 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { fetchDashboardStatsWithFallback, refreshAccessToken } from '../lib/apiClient'
-import {
-  ACCESS_TOKEN_KEY,
-  authStorage,
-} from '../utils/authStorage'
+import { ACCESS_TOKEN_KEY, authStorage } from '../utils/authStorage'
 import {
   buildGoogleOAuthUrl,
   getStoredAccessToken,
@@ -88,8 +85,16 @@ export function useAuth() {
       }, INACTIVITY_TIMEOUT_MS)
     }
 
-    const events: Array<keyof WindowEventMap> = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart']
-    events.forEach((event) => window.addEventListener(event, resetInactivityTimer, { passive: true }))
+    const events: Array<keyof WindowEventMap> = [
+      'mousemove',
+      'keydown',
+      'click',
+      'scroll',
+      'touchstart',
+    ]
+    events.forEach((event) =>
+      window.addEventListener(event, resetInactivityTimer, { passive: true }),
+    )
     resetInactivityTimer()
 
     return () => {
@@ -203,13 +208,16 @@ export function useAuth() {
 
     if (activeToken) {
       try {
-        await fetch(`${(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api').replace(/\/$/, '')}/auth/logout`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${activeToken}`,
+        await fetch(
+          `${(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api').replace(/\/$/, '')}/auth/logout`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${activeToken}`,
+            },
           },
-        })
+        )
       } catch {
         console.warn('Logout request failed, continuing with client-side cleanup.')
       }

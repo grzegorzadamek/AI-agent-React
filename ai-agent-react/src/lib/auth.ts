@@ -1,4 +1,11 @@
-import { AUTH_USER_KEY, ACCESS_TOKEN_KEY, OAUTH_NONCE_KEY, OAUTH_STATE_KEY, REFRESH_TOKEN_KEY, authStorage } from '../utils/authStorage'
+import {
+  AUTH_USER_KEY,
+  ACCESS_TOKEN_KEY,
+  OAUTH_NONCE_KEY,
+  OAUTH_STATE_KEY,
+  REFRESH_TOKEN_KEY,
+  authStorage,
+} from '../utils/authStorage'
 import type { UserProfile } from '../types'
 
 type GoogleJwtPayload = {
@@ -12,10 +19,14 @@ type GoogleJwtPayload = {
 
 const normalizeString = (value: string) => value.trim()
 
-const buildStringFromParts = (parts: Array<string | undefined>) => parts.filter(Boolean).join(' ').trim()
+const buildStringFromParts = (parts: Array<string | undefined>) =>
+  parts.filter(Boolean).join(' ').trim()
 
 export const buildGoogleOAuthUrl = () => {
-  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api').replace(/\/$/, '')
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api').replace(
+    /\/$/,
+    '',
+  )
 
   if (!apiBaseUrl) {
     throw new Error('Missing VITE_API_BASE_URL')
@@ -39,7 +50,8 @@ export const decodeGoogleIdToken = (idToken: string): GoogleJwtPayload => {
 
 export const buildMockUserProfile = (payload: GoogleJwtPayload): UserProfile => {
   const email = normalizeString(payload.email ?? 'unknown@example.com')
-  const name = buildStringFromParts([payload.given_name, payload.family_name]) || payload.name || 'Google User'
+  const name =
+    buildStringFromParts([payload.given_name, payload.family_name]) || payload.name || 'Google User'
   const initials = name
     .split(' ')
     .map((part) => part[0])

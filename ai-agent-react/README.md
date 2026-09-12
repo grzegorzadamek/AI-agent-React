@@ -288,9 +288,11 @@ http://localhost:5173
 Use the following instructions when generating the backend with Copilot.
 
 ### Goal
+
 Create a Node.js backend that matches the current frontend authentication and dashboard flow.
 
 ### Stack recommendation
+
 - Runtime: Node.js + TypeScript
 - Framework: Express.js or Fastify
 - Auth: Google OAuth 2.1, JWT access tokens, refresh tokens
@@ -388,6 +390,7 @@ Map the current frontend mock calls to these backend endpoints:
 ### Acceptance criteria
 
 The backend is complete when:
+
 - the user can sign in with Google,
 - the backend issues access and refresh tokens,
 - protected routes require authentication,

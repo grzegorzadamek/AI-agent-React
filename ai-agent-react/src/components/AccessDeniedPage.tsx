@@ -8,11 +8,12 @@ type AccessDeniedPageProps = {
 export function AccessDeniedPage({ email, reason = 'forbidden' }: AccessDeniedPageProps) {
   const navigate = useNavigate()
   const title = reason === 'session-expired' ? 'Sesja wygasła' : 'Nie masz dostępu do panelu'
-  const description = reason === 'session-expired'
-    ? 'Twoja sesja wygasła z powodu bezczynności albo upłynięcia czasu. Zaloguj się ponownie, aby wrócić do dashboardu.'
-    : email
-      ? `Konto ${email} nie jest dopuszczone do tej aplikacji w trybie mockowym.`
-      : 'To konto nie ma uprawnień do wejścia do dashboardu.'
+  const description =
+    reason === 'session-expired'
+      ? 'Twoja sesja wygasła z powodu bezczynności albo upłynięcia czasu. Zaloguj się ponownie, aby wrócić do dashboardu.'
+      : email
+        ? `Konto ${email} nie jest dopuszczone do tej aplikacji w trybie mockowym.`
+        : 'To konto nie ma uprawnień do wejścia do dashboardu.'
   return (
     <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.16),_transparent_28%),linear-gradient(135deg,_#020617_0%,_#111827_100%)] px-4 py-10 text-white">
       <section className="w-full max-w-2xl rounded-[32px] border border-rose-500/20 bg-slate-900/70 p-8 shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
@@ -21,7 +22,9 @@ export function AccessDeniedPage({ email, reason = 'forbidden' }: AccessDeniedPa
             🚫
           </div>
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-rose-400">Dostęp zablokowany</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-rose-400">
+              Dostęp zablokowany
+            </p>
             <h1 className="mt-2 text-3xl font-semibold text-white">{title}</h1>
           </div>
         </div>

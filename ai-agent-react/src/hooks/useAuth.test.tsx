@@ -30,8 +30,17 @@ vi.mock('@tanstack/react-query', async () => {
 })
 
 vi.mock('../lib/apiClient', () => ({
-  fetchDashboardStatsWithFallback: vi.fn(async () => ({ projects: 1, tasks: 2, notifications: 3, completion: 50 })),
-  refreshAccessToken: vi.fn(async () => ({ accessToken: 'new-token', refreshToken: 'refresh-token', expiresIn: 900 })),
+  fetchDashboardStatsWithFallback: vi.fn(async () => ({
+    projects: 1,
+    tasks: 2,
+    notifications: 3,
+    completion: 50,
+  })),
+  refreshAccessToken: vi.fn(async () => ({
+    accessToken: 'new-token',
+    refreshToken: 'refresh-token',
+    expiresIn: 900,
+  })),
 }))
 
 vi.mock('../utils/authStorage', () => {
@@ -79,7 +88,9 @@ describe('useAuth', () => {
   })
 
   it('calls buildGoogleOAuthUrl when login is triggered', () => {
-    const buildGoogleOAuthUrl = vi.spyOn(authLib, 'buildGoogleOAuthUrl').mockReturnValue('https://example.com')
+    const buildGoogleOAuthUrl = vi
+      .spyOn(authLib, 'buildGoogleOAuthUrl')
+      .mockReturnValue('https://example.com')
     const result = renderUseAuth()
 
     act(() => {

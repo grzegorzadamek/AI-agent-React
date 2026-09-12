@@ -13,6 +13,7 @@ const memoryAllowedEmails = new Set<string>(
 )
 
 const memoryDashboardProgress = new Map<string, { message: string; completion: number }>()
+let latestDashboardMessage = ''
 
 const upsertMemoryUser = (user: UserProfile) => {
   const memoryUser: UserProfile = {
@@ -52,7 +53,10 @@ export const upsertUser = async (user: UserProfile) => {
     const snapshot = await ref.get()
     return snapshot.data() as UserProfile
   } catch (error) {
-    console.warn('[userService] Firestore write failed, falling back to in-memory user storage.', error)
+    console.warn(
+      '[userService] Firestore write failed, falling back to in-memory user storage.',
+      error,
+    )
     return upsertMemoryUser(user)
   }
 }
@@ -68,7 +72,11 @@ export const getUserByEmail = async (email: string) => {
   }
 
   try {
-    const snapshot = await db.collection(USERS_COLLECTION).where('email', '==', email).limit(1).get()
+    const snapshot = await db
+      .collection(USERS_COLLECTION)
+      .where('email', '==', email)
+      .limit(1)
+      .get()
 
     if (snapshot.empty) {
       return null
@@ -76,7 +84,10 @@ export const getUserByEmail = async (email: string) => {
 
     return snapshot.docs[0].data() as UserProfile
   } catch (error) {
-    console.warn('[userService] Firestore read failed, falling back to in-memory user storage.', error)
+    console.warn(
+      '[userService] Firestore read failed, falling back to in-memory user storage.',
+      error,
+    )
     return findUserInMemory(email)
   }
 }
@@ -131,10 +142,16 @@ export const getDashboardStatsForUser = async (email: string) => {
       const snap = await db.collection('dashboardProgress').doc(normalized).get()
       if (snap.exists) {
         const data = snap.data() as { message: string; completion: number }
-        memoryDashboardProgress.set(normalized, { message: data.message, completion: data.completion })
+        memoryDashboardProgress.set(normalized, {
+          message: data.message,
+          completion: data.completion,
+        })
       }
     } catch (error) {
-      console.warn('[userService] Failed to read dashboard progress from Firestore, using memory.', error)
+      console.warn(
+        '[userService] Failed to read dashboard progress from Firestore, using memory.',
+        error,
+      )
     }
   }
 
@@ -162,18 +179,48 @@ export const saveDashboardMessageForUser = async (email: string, message: string
   }
 
   memoryDashboardProgress.set(normalized, { message, completion })
+  latestDashboardMessage = message
 
   if (db) {
     try {
-      await db.collection('dashboardProgress').doc(normalized).set({
-        message,
-        completion,
-        updatedAt: new Date().toISOString(),
-      }, { merge: true })
+      await db.collection('dashboardProgress').doc(normalized).set(
+        {
+          message,
+          completion,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      )
+      await db.collection('publicData').doc('latestMessage').set(
+        {
+          message,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      )
     } catch (error) {
-      console.warn('[userService] Failed to persist dashboard progress to Firestore, using memory only.', error)
+      console.warn(
+        '[userService] Failed to persist dashboard progress to Firestore, using memory only.',
+        error,
+      )
     }
   }
 
   return { message, completion }
+}
+
+export const getLatestDashboardMessage = async () => {
+  if (db) {
+    try {
+      const snapshot = await db.collection('publicData').doc('latestMessage').get()
+      if (snapshot.exists) {
+        const data = snapshot.data() as { message?: string }
+        latestDashboardMessage = data.message ?? ''
+      }
+    } catch (error) {
+      console.warn('[userService] Failed to read public dashboard message, using memory.', error)
+    }
+  }
+
+  return latestDashboardMessage
 }
