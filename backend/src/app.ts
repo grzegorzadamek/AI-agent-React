@@ -1,7 +1,7 @@
 import cors from 'cors'
 import express from 'express'
-import helmet from 'helmet'
-import rateLimit from 'express-rate-limit'
+import { default as helmet } from 'helmet'
+import { rateLimit } from 'express-rate-limit'
 import { env } from './config/env.js'
 import { requireAuth } from './middleware/auth.js'
 import {
@@ -17,6 +17,7 @@ import {
 import { sendError } from './utils/errors.js'
 
 export const app = express()
+export default app
 
 app.set('trust proxy', 1)
 app.use(helmet())
