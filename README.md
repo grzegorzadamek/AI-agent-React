@@ -213,7 +213,7 @@ components:
 
 ### 1) Prepare frontend environment
 
-Create a frontend environment file in the project root:
+Create `frontend/.env`:
 
 ```env
 VITE_API_BASE_URL=http://localhost:3000/api
@@ -261,7 +261,7 @@ http://localhost:3000
 ### 5) Start the frontend
 
 ```bash
-cd ..
+cd frontend
 npm install
 npm run dev
 ```
