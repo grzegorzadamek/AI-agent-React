@@ -129,7 +129,7 @@ export const isEmailAllowed = async (email: string) => {
     return false
   } catch (error) {
     console.warn('[userService] Allowed email lookup failed.', error)
-    return memoryAllowedEmails.has(normalizedEmail)
+    throw new Error('Firestore allowed email lookup failed.', { cause: error })
   }
 }
 

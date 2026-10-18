@@ -47,17 +47,29 @@ const configuredCredentials = env.GOOGLE_APPLICATION_CREDENTIALS?.trim()
 const resolvedServiceAccountPath = configuredCredentials
   ? path.resolve(process.cwd(), configuredCredentials)
   : undefined
+const serviceAccountFileExists =
+  resolvedServiceAccountPath !== undefined && fs.existsSync(resolvedServiceAccountPath)
 
 let firebaseEnabled = false
 
 if (!admin.apps.length) {
+  if (
+    env.NODE_ENV === 'production' &&
+    !configuredServiceAccount &&
+    !serviceAccountFileExists
+  ) {
+    throw new Error(
+      'Firebase credentials are missing. Set FIREBASE_SERVICE_ACCOUNT_JSON for production.',
+    )
+  }
+
   const appOptions: admin.AppOptions = {
     projectId: env.FIREBASE_PROJECT_ID,
   }
 
   if (configuredServiceAccount) {
     appOptions.credential = admin.credential.cert(configuredServiceAccount)
-  } else if (resolvedServiceAccountPath && fs.existsSync(resolvedServiceAccountPath)) {
+  } else if (resolvedServiceAccountPath && serviceAccountFileExists) {
     appOptions.credential = admin.credential.cert(resolvedServiceAccountPath)
   } else if (configuredCredentials) {
     console.warn(
@@ -76,9 +88,14 @@ if (!admin.apps.length) {
   try {
     admin.initializeApp(appOptions)
     firebaseEnabled = true
-  } catch {
+  } catch (error) {
+    if (env.NODE_ENV === 'production') {
+      throw new Error('Firebase Admin SDK initialization failed.', { cause: error })
+    }
+
     console.warn(
       '[firebase] Firebase Admin SDK initialization failed. Falling back to local in-memory user storage.',
+      error,
     )
   }
 }
