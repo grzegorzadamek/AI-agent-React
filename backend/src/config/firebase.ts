@@ -1,8 +1,48 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import admin from 'firebase-admin'
+import { z } from 'zod'
 import { env } from './env.js'
 
+const serviceAccountSchema = z.object({
+  project_id: z.string().min(1),
+  client_email: z.string().min(1),
+  private_key: z.string().min(1),
+})
+
+const getServiceAccountFromEnv = () => {
+  const configuredServiceAccount = env.FIREBASE_SERVICE_ACCOUNT_JSON?.trim()
+  if (!configuredServiceAccount) {
+    return undefined
+  }
+
+  let parsedJson: unknown
+  try {
+    parsedJson = JSON.parse(configuredServiceAccount)
+  } catch (error) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON must contain valid JSON.', { cause: error })
+  }
+
+  const result = serviceAccountSchema.safeParse(parsedJson)
+  if (!result.success) {
+    throw new Error(
+      'FIREBASE_SERVICE_ACCOUNT_JSON must include project_id, client_email, and private_key.',
+      { cause: result.error },
+    )
+  }
+
+  if (result.data.project_id !== env.FIREBASE_PROJECT_ID) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON project_id must match FIREBASE_PROJECT_ID.')
+  }
+
+  return {
+    projectId: result.data.project_id,
+    clientEmail: result.data.client_email,
+    privateKey: result.data.private_key,
+  }
+}
+
+const configuredServiceAccount = getServiceAccountFromEnv()
 const configuredCredentials = env.GOOGLE_APPLICATION_CREDENTIALS?.trim()
 const resolvedServiceAccountPath = configuredCredentials
   ? path.resolve(process.cwd(), configuredCredentials)
@@ -15,7 +55,9 @@ if (!admin.apps.length) {
     projectId: env.FIREBASE_PROJECT_ID,
   }
 
-  if (resolvedServiceAccountPath && fs.existsSync(resolvedServiceAccountPath)) {
+  if (configuredServiceAccount) {
+    appOptions.credential = admin.credential.cert(configuredServiceAccount)
+  } else if (resolvedServiceAccountPath && fs.existsSync(resolvedServiceAccountPath)) {
     appOptions.credential = admin.credential.cert(resolvedServiceAccountPath)
   } else if (configuredCredentials) {
     console.warn(

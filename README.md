@@ -233,6 +233,7 @@ GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
 JWT_ACCESS_SECRET=replace-me
 JWT_REFRESH_SECRET=replace-me
 FIREBASE_PROJECT_ID=your-firebase-project-id
+FIREBASE_SERVICE_ACCOUNT_JSON=
 GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
 ALLOWED_EMAILS=allowed@example.com
 ```
@@ -242,7 +243,8 @@ ALLOWED_EMAILS=allowed@example.com
 1. Create or open a Firebase project in Firebase Console.
 2. Enable Firebase Authentication with Google Sign-In.
 3. In Google Cloud Console create OAuth credentials.
-4. Download the Firebase service account JSON and save it as `backend/service-account.json`.
+4. Download the Firebase service account JSON and save it as `backend/service-account.json` for local development. For Vercel, add the complete JSON contents as the `FIREBASE_SERVICE_ACCOUNT_JSON` environment variable in the backend project; do not commit the service-account file.
+5. Add permitted login addresses to the Firestore `allowedUsers` collection using the lowercased email address as each document ID.
 
 ### 4) Start the backend
 

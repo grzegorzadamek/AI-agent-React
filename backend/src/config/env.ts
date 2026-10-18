@@ -11,6 +11,7 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(8),
   JWT_REFRESH_SECRET: z.string().min(8),
   FIREBASE_PROJECT_ID: z.string().min(1),
+  FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
   GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
   ALLOWED_EMAILS: z.string().optional(),
 })
