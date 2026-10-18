@@ -1,7 +1,21 @@
 import cors from 'cors'
 import express from 'express'
-import { createRequire } from 'node:module'
 import { rateLimit } from 'express-rate-limit'
+import {
+  contentSecurityPolicy,
+  crossOriginOpenerPolicy,
+  crossOriginResourcePolicy,
+  originAgentCluster,
+  referrerPolicy,
+  strictTransportSecurity,
+  xContentTypeOptions,
+  xDnsPrefetchControl,
+  xDownloadOptions,
+  xFrameOptions,
+  xPermittedCrossDomainPolicies,
+  xPoweredBy,
+  xXssProtection,
+} from 'helmet'
 import { env } from './config/env.js'
 import { requireAuth } from './middleware/auth.js'
 import {
@@ -19,10 +33,22 @@ import { sendError } from './utils/errors.js'
 export const app = express()
 export default app
 
-const helmet: () => express.RequestHandler = createRequire(import.meta.url)('helmet')
-
 app.set('trust proxy', 1)
-app.use(helmet())
+app.use(
+  contentSecurityPolicy(),
+  crossOriginOpenerPolicy(),
+  crossOriginResourcePolicy(),
+  originAgentCluster(),
+  referrerPolicy(),
+  strictTransportSecurity(),
+  xContentTypeOptions(),
+  xDnsPrefetchControl(),
+  xDownloadOptions(),
+  xFrameOptions(),
+  xPermittedCrossDomainPolicies(),
+  xPoweredBy(),
+  xXssProtection(),
+)
 
 app.use(
   cors({
