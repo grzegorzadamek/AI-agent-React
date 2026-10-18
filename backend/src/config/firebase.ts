@@ -88,6 +88,14 @@ if (!admin.apps.length) {
   try {
     admin.initializeApp(appOptions)
     firebaseEnabled = true
+    console.info('[firebase] Admin SDK initialized', {
+      projectId: env.FIREBASE_PROJECT_ID,
+      credentialSource: configuredServiceAccount
+        ? 'service-account-env'
+        : serviceAccountFileExists
+          ? 'service-account-file'
+          : 'application-default',
+    })
   } catch (error) {
     if (env.NODE_ENV === 'production') {
       throw new Error('Firebase Admin SDK initialization failed.', { cause: error })

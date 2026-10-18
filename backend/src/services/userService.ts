@@ -121,6 +121,10 @@ export const isEmailAllowed = async (email: string) => {
 
   try {
     const snapshot = await db.collection(ALLOWED_USERS_COLLECTION).doc(normalizedEmail).get()
+    console.info('[userService] Allowlist lookup completed', {
+      projectId: env.FIREBASE_PROJECT_ID,
+      allowed: snapshot.exists,
+    })
     if (snapshot.exists) {
       memoryAllowedEmails.add(normalizedEmail)
       return true
