@@ -246,7 +246,14 @@ ALLOWED_EMAILS=allowed@example.com
 4. Download the Firebase service account JSON and save it as `backend/service-account.json` for local development. For Vercel, add the complete JSON contents as the `FIREBASE_SERVICE_ACCOUNT_JSON` environment variable in the backend project; do not commit the service-account file.
 5. Add permitted login addresses to the Firestore `allowedUsers` collection using the lowercased email address as each document ID.
 
-### 4) Start the backend
+### 4) Deploy frontend and backend to Vercel
+
+1. Deploy `backend/` as a Vercel project and `frontend/` as a separate Vercel project.
+2. In the frontend project's Vercel environment variables, set `VITE_API_BASE_URL=/api`. The frontend Vercel rewrite proxies these requests to the backend so session cookies remain first-party.
+3. Set the backend's `FRONTEND_URL` to the frontend's public URL.
+4. Set the backend's `GOOGLE_REDIRECT_URI` to `https://ai-agent-react-alpha.vercel.app/api/auth/google/callback` and add the exact same URL to the OAuth client's Authorized redirect URIs in Google Cloud Console.
+
+### 5) Start the backend
 
 ```bash
 cd backend
